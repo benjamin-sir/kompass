@@ -45,7 +45,8 @@
     { id: 'spaeter', label: 'Später', key: '5', list: 'later', hint: 'Irgendwann, ohne Termin. Einmal pro Woche durchsehen.' },
     { id: 'warten', label: 'Warten auf', key: '6', list: 'waiting', hint: 'Liegt bei jemand anderem. Mit Datum, wann du nachfasst.' },
     { id: 'agenda', label: 'Agenda', key: '7', list: 'agenda', hint: 'Themen, die du im nächsten Gespräch mit dieser Person ansprichst.' },
-    { id: 'erledigt', label: 'Erledigt', key: '8' }
+    { id: 'erledigt', label: 'Erledigt', key: '8' },
+    { id: 'rueckblick', label: 'Rückblick', key: '9' }
   ];
   var LIST_LABEL = { inbox: 'Inbox', today: 'Heute', week: 'Diese Woche', later: 'Später', waiting: 'Warten auf', agenda: 'Agenda' };
   var TRIAGE = [
@@ -65,7 +66,8 @@
     modal: null,          // {type, ...}
     palette: null,        // {q, idx}
     showDoneToday: false,
-    weekStart: null       // Montag der angezeigten Kalenderwoche
+    weekStart: null,      // Montag der angezeigten Kalenderwoche
+    reviewWeek: null      // Montag der Woche im Rückblick
   };
 
   // ------------------------------------------------------------------ Theme
@@ -190,6 +192,9 @@
     if (S.saveError) {
       out += '<div class="banner is-danger"><span>Speichern im Browser ist fehlgeschlagen. Exportiere ein Backup, bevor du das Fenster schließt.</span><button type="button" class="btn" data-act="export">Backup exportieren</button></div>';
     }
+    if (K.review.reviewDue() && ui.view !== 'rueckblick') {
+      out += '<div class="banner"><span>Freitagnachmittag: Zeit für den Wochenrückblick und den Fokus für nächste Woche.</span><button type="button" class="btn" data-act="nav" data-view="rueckblick">Zum Rückblick</button></div>';
+    }
     if (S.hasExamples()) {
       out += '<div class="banner"><span>Du siehst Beispieldaten, damit du die Abläufe ausprobieren kannst.</span><button type="button" class="btn" data-act="remove-examples">Beispiele entfernen</button></div>';
     } else if (needsBackupNag()) {
@@ -285,6 +290,7 @@
 
     var cap = K.cal.capacity(today);
     var html = header(longDate(new Date()), '<span class="cap-inline' + (cap.over ? ' is-over' : '') + '">' + esc(K.cal.capacityText(cap)) + '</span>', right);
+    html += K.review.todayStrip();
     html += '<div class="today-grid"><div class="today-main">';
     if (due.length) {
       html += '<section class="section"><h2 class="section-title is-warn">Nachfassen fällig <span>' + due.length + '</span></h2>' +
@@ -385,6 +391,7 @@
       return '<li class="area-row">' +
         '<input type="color" id="area-color-' + esc(a.id) + '" value="' + esc(a.color) + '" data-area="' + esc(a.id) + '" data-field="color" aria-label="Farbe" />' +
         '<input type="text" id="area-name-' + esc(a.id) + '" value="' + esc(a.name) + '" data-area="' + esc(a.id) + '" data-field="name" aria-label="Name" />' +
+        '<label class="area-target"><input type="number" id="area-target-' + esc(a.id) + '" min="0" max="60" step="0.5" value="' + esc(a.weeklyTarget == null ? '' : a.weeklyTarget) + '" data-area="' + esc(a.id) + '" data-field="weeklyTarget" placeholder="–" aria-label="Wochenziel in Stunden" /><span>h/Woche</span></label>' +
         '<button type="button" class="btn ghost small" data-act="area-del" data-id="' + esc(a.id) + '">Entfernen</button></li>';
     }).join('');
     var used = 0;
@@ -406,7 +413,7 @@
       '</section>' +
 
       calendarCard() +
-      '<section class="card"><h2>Bereiche</h2><p class="muted">Sie ordnen deine Aufgaben thematisch. In der Eingabe mit <code>#Name</code> zuweisen, z. B. <code>#stake</code>.</p>' +
+      '<section class="card"><h2>Bereiche</h2><p class="muted">Sie ordnen deine Aufgaben thematisch. In der Eingabe mit <code>#Name</code> zuweisen, z. B. <code>#stake</code>. Das Wochenziel ist optional: So viele Stunden Fokus willst du pro Woche in diesen Bereich stecken. Der Rückblick zeigt, wie nah du drankommst.</p>' +
         '<ul class="areas">' + areas + '</ul>' +
         '<form class="area-add" data-act-form="area-add"><input id="area-new" type="text" placeholder="Neuer Bereich" aria-label="Neuer Bereich" /><button type="submit" class="btn">Hinzufügen</button></form>' +
       '</section>' +
@@ -454,13 +461,14 @@
     var body;
     if (ui.view === 'heute') body = viewToday();
     else if (ui.view === 'fokus') body = viewFocus();
+    else if (ui.view === 'rueckblick') body = K.review.view(ui.reviewWeek || K.cal.mondayOf(U.dayKey()));
     else if (ui.view === 'kalender') body = K.cal.weekView(ui.weekStart || K.cal.mondayOf(U.dayKey()), S.openIn('today').concat(S.openIn('week')));
     else if (ui.view === 'optionen') body = viewSettings();
     else if (ui.view === 'warten') body = viewWaiting(v);
     else if (ui.view === 'agenda') body = viewAgenda(v);
     else if (ui.view === 'erledigt') body = viewDone(v);
     else body = viewList(v);
-    var cls = ui.view === 'fokus' ? ' is-focus' : (ui.view === 'heute' || ui.view === 'kalender') ? ' is-wide' : '';
+    var cls = ui.view === 'fokus' ? ' is-focus' : (ui.view === 'heute' || ui.view === 'kalender' || ui.view === 'rueckblick') ? ' is-wide' : '';
     return '<div class="main-inner' + cls + '">' + banners() + body + '</div>';
   }
 
@@ -530,7 +538,7 @@
     } else if (m.type === 'help') {
       var rows = [
         [MOD + ' K', 'Suchen und springen'], ['N', 'Neue Aufgabe'], [MOD + ' V', 'Link oder Text in die Inbox einfügen'],
-        ['1 – 8', 'Listen und Kalender wechseln'], ['J / K oder ↓ / ↑', 'Aufgabe auswählen'], ['E oder ↵', 'Bearbeiten'],
+        ['1 – 9', 'Listen, Kalender und Rückblick wechseln'], ['J / K oder ↓ / ↑', 'Aufgabe auswählen'], ['E oder ↵', 'Bearbeiten'],
         ['X oder ' + MOD + ' ↵', 'Erledigt'], ['H W S A G I', 'Nach Heute, Woche, Später, Warten, Agenda, Inbox'],
         ['P', 'In die nächste freie Lücke heute einplanen'], ['F', 'Fokus auf die Aufgabe'], ['T', 'Timer starten oder stoppen'], ['Entf', 'Löschen (mit Rückgängig)'], ['Esc', 'Schließen, Fokus verlassen']
       ];
@@ -883,6 +891,23 @@
       case 'palette-close-bg': if (e.target === el) closePalette(); break;
       case 'help': openModal({ type: 'help' }); break;
       case 'plan': planTask(id); break;
+      case 'reveal': { var rt = S.task(id); if (rt) revealTask(rt); break; }
+      case 'review-prev': case 'review-next': {
+        var rb = new Date((ui.reviewWeek || K.cal.mondayOf(U.dayKey())) + 'T12:00:00');
+        ui.reviewWeek = U.dayKey(U.addDays(rb, act === 'review-prev' ? -7 : 7));
+        render(); break;
+      }
+      case 'review-today': ui.reviewWeek = null; render(); break;
+      case 'goal-toggle': {
+        var gid = el.getAttribute('data-goal');
+        S.updateWeek(el.getAttribute('data-week'), function (w) { w.goals.forEach(function (g) { if (g.id === gid) g.done = !g.done; }); });
+        break;
+      }
+      case 'goal-del': {
+        var gd = el.getAttribute('data-goal'); var snapG = S.snapshot();
+        S.updateWeek(el.getAttribute('data-week'), function (w) { w.goals = w.goals.filter(function (g) { return g.id !== gd; }); });
+        toast('Wochenfokus entfernt', snapG); break;
+      }
       case 'block-open': e.preventDefault(); openModal({ type: 'block', blockId: el.getAttribute('data-block') }); break;
       case 'block-dur': {
         var bb = S.block(ui.modal && ui.modal.blockId);
@@ -965,12 +990,18 @@
       ui.modal = null;
       cm.run();
       render();
+    } else if (kind === 'goal-add') {
+      var wk = form.getAttribute('data-week');
+      var gin = form.querySelector('input');
+      var text = gin.value.trim();
+      if (!text) return;
+      S.updateWeek(wk, function (w) { if (w.goals.length < 3) w.goals.push({ id: U.uid(), text: text, done: false }); });
+      setTimeout(function () { var i = document.getElementById(gin.id); if (i) i.focus(); }, 0);
     } else if (kind === 'area-add') {
       var inp = $('#area-new');
       var name = inp.value.trim();
       if (!name) return;
-      var palette = ['#4f7cac', '#3f9a8a', '#b5793a', '#8a63b8', '#7a8490', '#b2546a', '#5c8f3a'];
-      S.addArea(name, palette[S.state.areas.length % palette.length]);
+      S.addArea(name, S.nextAreaColor());
       setTimeout(function () { var i = $('#area-new'); if (i) i.focus(); }, 0);
     }
   }
@@ -985,10 +1016,17 @@
       if (url && !/\.html?(\?|$)/i.test(url)) K.cal.sync(true);
       return;
     }
+    if (el.hasAttribute('data-week-check')) {
+      var cid = el.getAttribute('data-week-check'), on = el.checked;
+      S.updateWeek(el.getAttribute('data-week'), function (w) { w.checks[cid] = on; });
+      return;
+    }
     if (el.hasAttribute('data-area')) {
+      var field = el.getAttribute('data-field');
       var v = el.value.trim();
-      if (el.getAttribute('data-field') === 'name' && !v) return;
-      S.updateArea(el.getAttribute('data-area'), (function () { var o = {}; o[el.getAttribute('data-field')] = v; return o; })());
+      if (field === 'name' && !v) return;
+      if (field === 'weeklyTarget') v = v === '' ? null : Math.max(0, Number(v.replace(',', '.')) || 0) || null;
+      S.updateArea(el.getAttribute('data-area'), (function () { var o = {}; o[field] = v; return o; })());
       return;
     }
     if (el.hasAttribute('data-setting')) {
@@ -1005,6 +1043,12 @@
     if (el.id === 'palette-input') {
       ui.palette.q = el.value; ui.palette.idx = 0;
       $('#palette-list').innerHTML = paletteListHTML();
+      return;
+    }
+    if (el.id === 'week-note') {
+      clearTimeout(notesTimer);
+      var wkn = el.getAttribute('data-week'), txt = el.value;
+      notesTimer = setTimeout(function () { S.persistWeekNote(wkn, txt); }, 400);
       return;
     }
     if (el.id === 'focus-notes') {

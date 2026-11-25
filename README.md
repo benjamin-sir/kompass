@@ -24,6 +24,7 @@ Es gibt zwei Wege, sie zu starten:
 | Planen | Heute, Kalender | Aufgabe in die Zeitleiste ziehen oder `P` für die nächste freie Lücke; Outlook-Termine liegen grau im Hintergrund |
 | Arbeiten | Fokus | `F` öffnet eine Aufgabe im Fokus, `T` startet den Timer, `Strg+Enter` erledigt sie |
 | Nachfassen | Heute, Warten auf | Fällige Warten-auf-Einträge erscheinen oben auf „Heute“ |
+| Zurückblicken | Rückblick (`9`) | Freitags: Fokus- gegen Meetingzeit, Fokus pro Bereich, Liegengebliebenes, Abschluss-Checkliste, Wochenfokus für nächste Woche |
 
 Alle Kürzel zeigt `?` in der App. `Strg+K` sucht über alle Aufgaben und Befehle.
 
@@ -60,6 +61,7 @@ app/
   sw.js, manifest       Offline-Betrieb und Installation als App
   js/ics.js             liest .ics-Dateien inkl. Serienterminen und Zeitzonen
   js/calendar.js        Zeitleiste, Wochenansicht, freie Zeit, Zeitblöcke
+  js/review.js          Wochenrückblick, Wochenfokus, Abschluss-Checkliste
 tools/build_single.py   baut dist/kompass.html
 ```
 
@@ -69,5 +71,5 @@ Nach Änderungen in `app/` die Einzeldatei neu bauen (`python3 tools/build_singl
 
 - [x] Phase 1: Inbox mit Link-Erkennung, Bookmarklet, Drag & Drop aus Outlook, Sortieren, Heute, Woche, Später, Warten auf, Agenda, Fokus mit Timer, Suche, Tastenkürzel, Themes, Backup
 - [x] Phase 2: Tageszeitleiste auf „Heute“, Wochenkalender, Zeitblöcke per Drag & Drop (verschieben, Länge ändern), `P` plant in die nächste Lücke, Outlook-Termine per ICS-Link oder `.ics`-Datei, freie Zeit pro Tag
-- [ ] Phase 3: Wochenrückblick (Fokus- vs. Meetingzeit, Erledigtes, Überfälliges), Bereiche und Ziele
+- [x] Phase 3: Wochenrückblick (Fokus- vs. Meetingzeit pro Tag, Fokus pro Bereich mit Wochenziel, Erledigtes, was Aufmerksamkeit braucht), Wochenfokus mit bis zu drei Punkten (auch auf „Heute“), Abschluss-Checkliste mit Notiz, Hinweis am Freitagnachmittag
 - [ ] Später: Sync mit dem iPhone; Microsoft-Graph-Anbindung, falls die IT sie erlaubt

@@ -29,12 +29,15 @@
     return x;
   }
 
+  // Farben in fester Reihenfolge, geprüft auf Unterscheidbarkeit (auch bei Farbsehschwäche)
+  var AREA_COLORS = ['#257de0', '#f47230', '#00b894', '#f2a600', '#ee7fac', '#008a17', '#6a4ce2', '#ec4647'];
+  var OLD_DEFAULTS = ['#4f7cac', '#3f9a8a', '#b5793a', '#8a63b8', '#7a8490'];
   var DEFAULT_AREAS = [
-    ['Produktziel & Roadmap', '#4f7cac'],
-    ['Backlog & Refinement', '#3f9a8a'],
-    ['Stakeholder', '#b5793a'],
-    ['Team', '#8a63b8'],
-    ['Admin & Orga', '#7a8490']
+    ['Produktziel & Roadmap', AREA_COLORS[0], 6],
+    ['Backlog & Refinement', AREA_COLORS[1], 4],
+    ['Stakeholder', AREA_COLORS[2], null],
+    ['Team', AREA_COLORS[3], null],
+    ['Admin & Orga', AREA_COLORS[4], null]
   ];
 
   function emptyCalendar() {
@@ -48,10 +51,11 @@
       createdAt: t,
       tasks: [],
       areas: DEFAULT_AREAS.map(function (a, i) {
-        return { id: uid(), name: a[0], color: a[1], order: i, createdAt: t, updatedAt: t };
+        return { id: uid(), name: a[0], color: a[1], weeklyTarget: a[2], order: i, createdAt: t, updatedAt: t };
       }),
       timeEntries: [],
       blocks: [],
+      weeks: {},
       calendar: emptyCalendar(),
       activeTimer: null,
       settings: { theme: 'system', dailyFocusTarget: 3, jiraBase: '', workStart: '08:00', workEnd: '17:00', showWeekend: false, lastBackupAt: null, backupSnoozedUntil: null }
@@ -118,6 +122,21 @@
       var st = at(e[1], e[2], e[3]);
       return { id: 'ex-' + e[0] + st.getTime(), title: e[0], location: e[6], allDay: false, busy: e[5], start: st.toISOString(), end: new Date(st.getTime() + e[4] * 6e4).toISOString() };
     });
+    var mon = new Date(); mon.setDate(mon.getDate() - (mon.getDay() + 6) % 7);
+    s.weeks[dayKey(mon)] = { goals: [
+      { id: uid(), text: 'Release 4.3 mit Vertrieb abstimmen', done: true },
+      { id: uid(), text: 'Backlog für Q1 auf 20 Stories priorisieren', done: false }
+    ], checks: {}, note: '', example: true };
+    // Fokuszeit der letzten Tage, damit der Rückblick etwas zeigt
+    var exTasks = s.tasks.filter(function (t) { return t.example && t.areaId; });
+    for (var back = 1; back <= 4; back++) {
+      var dd = at(-back, 0, 0); if (dd.getDay() === 0 || dd.getDay() === 6) continue;
+      [[9, 40, 70], [14, 0, 45], [16, 30, 35]].forEach(function (slot, k) {
+        var tk = exTasks[(back + k) % exTasks.length];
+        var st = at(-back, slot[0], slot[1]);
+        s.timeEntries.push({ id: uid(), taskId: tk.id, start: st.toISOString(), end: new Date(st.getTime() + slot[2] * 6e4).toISOString(), example: true, createdAt: nowIso(), updatedAt: nowIso() });
+      });
+    }
     var planned = s.tasks.filter(function (t) { return t.list === 'today' && !t.done; });
     if (planned[0]) s.blocks.push(newBlock(planned[0].id, at(0, 10, 30), at(0, 11, 30), true));
     if (planned[1]) s.blocks.push(newBlock(planned[1].id, at(0, 15, 0), at(0, 15, 45), true));
@@ -136,6 +155,12 @@
     s.areas = Array.isArray(s.areas) ? s.areas : base.areas;
     s.timeEntries = Array.isArray(s.timeEntries) ? s.timeEntries : [];
     s.blocks = Array.isArray(s.blocks) ? s.blocks : [];
+    s.weeks = s.weeks && typeof s.weeks === 'object' ? s.weeks : {};
+    s.areas.forEach(function (a) {
+      var i = OLD_DEFAULTS.indexOf(String(a.color).toLowerCase());
+      if (i >= 0) a.color = AREA_COLORS[i];
+      if (a.weeklyTarget === undefined) a.weeklyTarget = null;
+    });
     s.calendar = Object.assign(emptyCalendar(), s.calendar || {});
     if (!Array.isArray(s.calendar.events)) s.calendar.events = [];
     s.settings = Object.assign({}, base.settings, s.settings || {});
@@ -245,6 +270,7 @@
       state.timeEntries = state.timeEntries.filter(function (e) { return !e.example; });
       state.blocks = state.blocks.filter(function (b) { return !b.example; });
       if (state.calendar.source === 'example') state.calendar = emptyCalendar();
+      Object.keys(state.weeks).forEach(function (k) { if (state.weeks[k].example) delete state.weeks[k]; });
       if (state.activeTimer && !store.task(state.activeTimer.taskId)) state.activeTimer = null;
       store.commit();
     },
@@ -341,6 +367,23 @@
     },
     setCalendar: function (fields) { Object.assign(state.calendar, fields); store.commit(); },
     clearCalendar: function () { state.calendar = emptyCalendar(); store.commit(); },
+
+    // ---- Wochen: Wochenfokus, Abschluss-Checkliste, Notiz ----
+    week: function (monday) {
+      return state.weeks[monday] || { goals: [], checks: {}, note: '' };
+    },
+    updateWeek: function (monday, fn) {
+      var w = state.weeks[monday] || (state.weeks[monday] = { goals: [], checks: {}, note: '' });
+      fn(w);
+      w.updatedAt = nowIso();
+      store.commit();
+    },
+    persistWeekNote: function (monday, note) {
+      var w = state.weeks[monday] || (state.weeks[monday] = { goals: [], checks: {}, note: '' });
+      w.note = note; w.updatedAt = nowIso();
+      write();
+    },
+    nextAreaColor: function () { return AREA_COLORS[state.areas.length % AREA_COLORS.length]; },
 
     // ---- Einstellungen ----
     setSetting: function (k, v) { state.settings[k] = v; store.commit(); }
