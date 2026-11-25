@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Kompass</title>
+<meta name="description" content="Aufgaben aus Mail, Jira, Confluence und Teams an einem Ort sammeln, priorisieren und fokussiert abarbeiten.">
+<meta name="theme-color" content="#23637f">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="shell">
+  <aside id="sidebar"></aside>
+  <main id="main"><noscript>Kompass braucht JavaScript.</noscript></main>
+</div>
+<div id="overlay"></div>
+<div id="toasts" aria-live="polite"></div>
+<div id="drop-hint">Hier loslassen: landet in der Inbox</div>
+<script src="js/store.js"></script>
+<script src="js/links.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
