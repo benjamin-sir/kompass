@@ -40,11 +40,12 @@
   var VIEWS = [
     { id: 'inbox', label: 'Inbox', key: '1', list: 'inbox', hint: 'Alles, was reinkommt. Einmal am Tag sortieren.' },
     { id: 'heute', label: 'Heute', key: '2', list: 'today' },
-    { id: 'woche', label: 'Diese Woche', key: '3', list: 'week', hint: 'Steht an, aber nicht heute.' },
-    { id: 'spaeter', label: 'Später', key: '4', list: 'later', hint: 'Irgendwann, ohne Termin. Einmal pro Woche durchsehen.' },
-    { id: 'warten', label: 'Warten auf', key: '5', list: 'waiting', hint: 'Liegt bei jemand anderem. Mit Datum, wann du nachfasst.' },
-    { id: 'agenda', label: 'Agenda', key: '6', list: 'agenda', hint: 'Themen, die du im nächsten Gespräch mit dieser Person ansprichst.' },
-    { id: 'erledigt', label: 'Erledigt', key: '7' }
+    { id: 'kalender', label: 'Kalender', key: '3' },
+    { id: 'woche', label: 'Diese Woche', key: '4', list: 'week', hint: 'Steht an, aber nicht heute.' },
+    { id: 'spaeter', label: 'Später', key: '5', list: 'later', hint: 'Irgendwann, ohne Termin. Einmal pro Woche durchsehen.' },
+    { id: 'warten', label: 'Warten auf', key: '6', list: 'waiting', hint: 'Liegt bei jemand anderem. Mit Datum, wann du nachfasst.' },
+    { id: 'agenda', label: 'Agenda', key: '7', list: 'agenda', hint: 'Themen, die du im nächsten Gespräch mit dieser Person ansprichst.' },
+    { id: 'erledigt', label: 'Erledigt', key: '8' }
   ];
   var LIST_LABEL = { inbox: 'Inbox', today: 'Heute', week: 'Diese Woche', later: 'Später', waiting: 'Warten auf', agenda: 'Agenda' };
   var TRIAGE = [
@@ -63,7 +64,8 @@
     focusTaskId: null,
     modal: null,          // {type, ...}
     palette: null,        // {q, idx}
-    showDoneToday: false
+    showDoneToday: false,
+    weekStart: null       // Montag der angezeigten Kalenderwoche
   };
 
   // ------------------------------------------------------------------ Theme
@@ -126,11 +128,23 @@
     return '<span class="chip time' + (running ? ' is-running' : '') + '"' + (running ? ' data-timer="task" data-task="' + esc(t.id) + '"' : '') + '>' + (running ? fmtClock(sec) : fmtDur(sec)) + '</span>';
   }
 
+  function blockChip(t) {
+    if (t.done) return '';
+    var today = U.dayKey();
+    var bs = S.blocksOfTask(t.id).filter(function (b) { return b.end >= new Date().toISOString() || U.dayKey(b.start) === today; })
+      .sort(function (a, b) { return a.start.localeCompare(b.start); });
+    if (!bs.length) return '';
+    var b = bs[0];
+    var day = U.dayKey(b.start);
+    var label = (day === today ? '' : shortDate(day) + ' ') + K.cal.hm(new Date(b.start).getTime());
+    return '<button type="button" class="chip block" data-act="block-open" data-block="' + esc(b.id) + '" title="Eingeplant">◷ ' + esc(label) + (bs.length > 1 ? ' +' + (bs.length - 1) : '') + '</button>';
+  }
+
   function taskRow(t, opts) {
     opts = opts || {};
     var running = S.state.activeTimer && S.state.activeTimer.taskId === t.id;
     var sel = ui.selectedId === t.id;
-    var meta = [areaChip(t), sourceChip(t), opts.hidePerson ? '' : (t.person && !opts.hidePerson ? '<span class="chip person">' + esc(t.person) + '</span>' : ''), followChip(t), ageChip(t), timeChip(t), t.example ? '<span class="chip example">Beispiel</span>' : ''].join('');
+    var meta = [blockChip(t), areaChip(t), sourceChip(t), opts.hidePerson ? '' : (t.person && !opts.hidePerson ? '<span class="chip person">' + esc(t.person) + '</span>' : ''), followChip(t), ageChip(t), timeChip(t), t.example ? '<span class="chip example">Beispiel</span>' : ''].join('');
     var actions = '';
     if (!t.done) {
       if (t.list === 'inbox' || opts.triage) {
@@ -138,6 +152,7 @@
           return '<button type="button" class="tbtn" data-act="move" data-id="' + esc(t.id) + '" data-list="' + x.list + '" title="' + x.label + ' (' + x.key + ')">' + x.label + '</button>';
         }).join('');
       }
+      actions += '<button type="button" class="ibtn" data-act="plan" data-id="' + esc(t.id) + '" title="In die nächste freie Lücke (P)" aria-label="Einplanen">◷</button>';
       actions += '<button type="button" class="ibtn' + (running ? ' is-on' : '') + '" data-act="timer" data-id="' + esc(t.id) + '" title="' + (running ? 'Timer stoppen' : 'Timer starten') + ' (T)" aria-label="' + (running ? 'Timer stoppen' : 'Timer starten') + '">' + (running ? '❚❚' : '▶') + '</button>';
       actions += '<button type="button" class="ibtn" data-act="focus" data-id="' + esc(t.id) + '" title="Fokus (F)" aria-label="Fokus">◎</button>';
     } else {
@@ -268,7 +283,9 @@
     var doneToday = S.tasks().filter(function (t) { return t.done && t.doneAt && U.dayKey(t.doneAt) === today; })
       .sort(function (a, b) { return b.doneAt.localeCompare(a.doneAt); });
 
-    var html = header(longDate(new Date()), '', right);
+    var cap = K.cal.capacity(today);
+    var html = header(longDate(new Date()), '<span class="cap-inline' + (cap.over ? ' is-over' : '') + '">' + esc(K.cal.capacityText(cap)) + '</span>', right);
+    html += '<div class="today-grid"><div class="today-main">';
     if (due.length) {
       html += '<section class="section"><h2 class="section-title is-warn">Nachfassen fällig <span>' + due.length + '</span></h2>' +
         '<ul class="tasks">' + due.map(function (t) {
@@ -281,6 +298,7 @@
       html += '<section class="section"><button type="button" class="section-toggle" data-act="toggle-done-today" aria-expanded="' + ui.showDoneToday + '">Heute erledigt <span>' + doneToday.length + '</span></button>' +
         (ui.showDoneToday ? taskList(doneToday) : '') + '</section>';
     }
+    html += '</div>' + K.cal.dayPanel(today) + '</div>';
     return html;
   }
 
@@ -380,9 +398,14 @@
             return '<button type="button" role="radio" aria-checked="' + (s.theme === k) + '" class="seg-btn' + (s.theme === k ? ' is-on' : '') + '" data-act="theme" data-theme-val="' + k + '">' + label + '</button>';
           }).join('') +
         '</div>' +
+        '<div class="field-row">' +
+          '<label class="field"><span>Arbeitsbeginn</span><input id="set-ws" type="time" step="900" value="' + esc(s.workStart) + '" data-setting="workStart" /></label>' +
+          '<label class="field"><span>Arbeitsende</span><input id="set-we" type="time" step="900" value="' + esc(s.workEnd) + '" data-setting="workEnd" /></label>' +
+        '</div>' +
         '<label class="field"><span>Fokusziel pro Tag (Stunden)</span><input id="set-target" type="number" min="0.5" max="12" step="0.5" value="' + esc(s.dailyFocusTarget) + '" data-setting="dailyFocusTarget" /></label>' +
       '</section>' +
 
+      calendarCard() +
       '<section class="card"><h2>Bereiche</h2><p class="muted">Sie ordnen deine Aufgaben thematisch. In der Eingabe mit <code>#Name</code> zuweisen, z. B. <code>#stake</code>.</p>' +
         '<ul class="areas">' + areas + '</ul>' +
         '<form class="area-add" data-act-form="area-add"><input id="area-new" type="text" placeholder="Neuer Bereich" aria-label="Neuer Bereich" /><button type="submit" class="btn">Hinzufügen</button></form>' +
@@ -407,17 +430,38 @@
       '</section>';
   }
 
+  function calendarCard() {
+    var c = S.state.calendar;
+    var isHtml = /\.html?(\?|$)/i.test(c.url || '');
+    return '<section class="card" id="kalender-verbinden"><h2>Outlook-Kalender</h2>' +
+      '<p class="muted">Deine Termine erscheinen grau im Hintergrund von „Heute“ und „Kalender“. Kompass liest nur, ändert nichts in Outlook.</p>' +
+      '<p>' + K.cal.statusLine(true) + '</p>' +
+      '<label class="field"><span>Veröffentlichter ICS-Link</span><input id="cal-url" type="url" placeholder="https://outlook.office365.com/owa/calendar/…/calendar.ics" value="' + esc(c.url) + '" /></label>' +
+      (isHtml ? '<p class="banner is-warn">Das ist der HTML-Link. Kompass braucht den ICS-Link, der auf <code>.ics</code> endet.</p>' : '') +
+      '<div class="row-btns"><button type="button" class="btn primary" data-act="cal-sync"' + (c.url ? '' : ' disabled') + '>Jetzt laden</button>' +
+      (c.url ? '<a class="btn" href="' + esc(K.cal.normalizeUrl(c.url)) + '" target="_blank" rel="noopener">Link öffnen (lädt .ics-Datei)</a>' : '') +
+      '<label class="btn" for="ics-file">.ics-Datei importieren</label><input id="ics-file" type="file" accept=".ics,text/calendar" class="sr-only" />' +
+      (c.source ? '<button type="button" class="btn ghost danger" data-act="cal-clear">Termine entfernen</button>' : '') + '</div>' +
+      (c.error === 'cors'
+        ? '<div class="banner is-warn"><span>Outlook erlaubt nicht, dass eine Webseite den Kalender direkt abruft. So geht es trotzdem: <strong>Link öffnen</strong> klicken, Edge lädt <code>calendar.ics</code> herunter, die Datei in Kompass ziehen. Das dauert morgens etwa zehn Sekunden.</span></div>'
+        : '') +
+      '<p class="muted small">Der ICS-Link wirkt wie ein Passwort: Wer ihn hat, sieht deinen Kalender. Er bleibt in diesem Browser und steht auch im Backup.</p>' +
+    '</section>';
+  }
+
   function mainHTML() {
     var v = viewById(ui.view);
     var body;
     if (ui.view === 'heute') body = viewToday();
     else if (ui.view === 'fokus') body = viewFocus();
+    else if (ui.view === 'kalender') body = K.cal.weekView(ui.weekStart || K.cal.mondayOf(U.dayKey()), S.openIn('today').concat(S.openIn('week')));
     else if (ui.view === 'optionen') body = viewSettings();
     else if (ui.view === 'warten') body = viewWaiting(v);
     else if (ui.view === 'agenda') body = viewAgenda(v);
     else if (ui.view === 'erledigt') body = viewDone(v);
     else body = viewList(v);
-    return '<div class="main-inner' + (ui.view === 'fokus' ? ' is-focus' : '') + '">' + banners() + body + '</div>';
+    var cls = ui.view === 'fokus' ? ' is-focus' : (ui.view === 'heute' || ui.view === 'kalender') ? ' is-wide' : '';
+    return '<div class="main-inner' + cls + '">' + banners() + body + '</div>';
   }
 
   // ------------------------------------------------------------------ Overlays
@@ -460,6 +504,25 @@
         '<p class="muted small">Erfasst ' + esc(new Date(e.createdAt).toLocaleString('de-DE')) + (S.secondsOnTask(e.id) ? ' · ' + fmtDur(S.secondsOnTask(e.id)) + ' Fokuszeit' : '') + '</p>' +
         '<div class="modal-btns"><button type="button" class="btn ghost danger" data-act="del" data-id="' + esc(e.id) + '">Löschen</button><span class="spacer"></span><button type="button" class="btn ghost" data-act="modal-close">Abbrechen</button><button type="submit" class="btn primary">Speichern</button></div>' +
       '</form>';
+    } else if (m.type === 'block') {
+      var b = S.block(m.blockId);
+      var bt = b && S.task(b.taskId);
+      if (!bt) return '';
+      var bs = new Date(b.start).getTime(), be = new Date(b.end).getTime();
+      var durNow = Math.round((be - bs) / 6e4);
+      inner = '<div class="modal-form">' +
+        '<p class="eyebrow">Eingeplant · ' + esc(shortDate(U.dayKey(b.start))) + ', ' + K.cal.hm(bs) + '–' + K.cal.hm(be) + '</p>' +
+        '<h2>' + esc(bt.title) + '</h2>' +
+        '<div class="task-meta">' + areaChip(bt) + sourceChip(bt) + '</div>' +
+        '<div class="field"><span>Dauer</span><div class="seg">' + [30, 45, 60, 90, 120].map(function (d) {
+          return '<button type="button" class="seg-btn' + (d === durNow ? ' is-on' : '') + '" data-act="block-dur" data-min="' + d + '">' + (d < 60 ? d + ' min' : (d / 60).toLocaleString('de-DE') + ' h') + '</button>';
+        }).join('') + '</div></div>' +
+        '<div class="modal-btns">' +
+          '<button type="button" class="btn ghost danger" data-act="block-del">Aus dem Kalender nehmen</button><span class="spacer"></span>' +
+          '<button type="button" class="btn" data-act="edit" data-id="' + esc(bt.id) + '">Bearbeiten</button>' +
+          (bt.done ? '' : '<button type="button" class="btn" data-act="done" data-id="' + esc(bt.id) + '">Erledigt</button>') +
+          (bt.done ? '' : '<button type="button" class="btn primary" data-act="block-focus">Fokus starten</button>') +
+        '</div></div>';
     } else if (m.type === 'confirm') {
       inner = '<form class="modal-form" data-act-form="confirm"><h2>' + esc(m.title) + '</h2><p>' + esc(m.text) + '</p>' +
         (m.typeWord ? '<label class="field"><span>Zum Bestätigen „' + esc(m.typeWord) + '“ eingeben</span><input id="confirm-word" type="text" autocomplete="off" /></label>' : '') +
@@ -467,12 +530,12 @@
     } else if (m.type === 'help') {
       var rows = [
         [MOD + ' K', 'Suchen und springen'], ['N', 'Neue Aufgabe'], [MOD + ' V', 'Link oder Text in die Inbox einfügen'],
-        ['1 – 7', 'Listen wechseln'], ['J / K oder ↓ / ↑', 'Aufgabe auswählen'], ['E oder ↵', 'Bearbeiten'],
+        ['1 – 8', 'Listen und Kalender wechseln'], ['J / K oder ↓ / ↑', 'Aufgabe auswählen'], ['E oder ↵', 'Bearbeiten'],
         ['X oder ' + MOD + ' ↵', 'Erledigt'], ['H W S A G I', 'Nach Heute, Woche, Später, Warten, Agenda, Inbox'],
-        ['F', 'Fokus auf die Aufgabe'], ['T', 'Timer starten oder stoppen'], ['Entf', 'Löschen (mit Rückgängig)'], ['Esc', 'Schließen, Fokus verlassen']
+        ['P', 'In die nächste freie Lücke heute einplanen'], ['F', 'Fokus auf die Aufgabe'], ['T', 'Timer starten oder stoppen'], ['Entf', 'Löschen (mit Rückgängig)'], ['Esc', 'Schließen, Fokus verlassen']
       ];
       inner = '<div class="modal-form"><h2>Tastenkürzel</h2><table class="keys">' + rows.map(function (r) { return '<tr><td><kbd>' + esc(r[0]) + '</kbd></td><td>' + esc(r[1]) + '</td></tr>'; }).join('') + '</table>' +
-        '<p class="muted small">Aufgaben lassen sich per Drag & Drop sortieren oder auf einen Listennamen links ziehen.</p>' +
+        '<p class="muted small">Aufgaben lassen sich per Drag & Drop sortieren, auf einen Listennamen links oder in den Kalender ziehen. Blöcke im Kalender verschiebst du mit der Maus, die Länge änderst du am unteren Rand.</p>' +
         '<div class="modal-btns"><button type="button" class="btn primary" data-act="modal-close">Schließen</button></div></div>';
     }
     return '<div class="backdrop" data-act="modal-close-bg"><div class="modal" role="dialog" aria-modal="true">' + inner + '</div></div>';
@@ -526,6 +589,8 @@
     var selStart = null, selEnd = null;
     try { if (activeId && active.selectionStart != null) { selStart = active.selectionStart; selEnd = active.selectionEnd; } } catch (e) { }
     var mainScroll = document.scrollingElement ? document.scrollingElement.scrollTop : 0;
+    var ds = $('#day-scroll');
+    var dayScroll = ds ? ds.scrollTop : null;
 
     $('#sidebar').innerHTML = sidebarHTML();
     $('#main').innerHTML = mainHTML();
@@ -539,6 +604,11 @@
       }
     }
     if (document.scrollingElement) document.scrollingElement.scrollTop = mainScroll;
+    var ds2 = $('#day-scroll');
+    if (ds2) {
+      if (dayScroll != null) ds2.scrollTop = dayScroll;
+      else { var now = $('.tl-now', ds2); ds2.scrollTop = now ? Math.max(0, now.offsetTop - 90) : 0; }
+    }
     updateTitle();
   }
   function schedule() { if (!renderQueued) { renderQueued = true; requestAnimationFrame(render); } }
@@ -631,6 +701,17 @@
     S.deleteTask(id);
     toast('Gelöscht: ' + t.title, snap);
   }
+  function planTask(id) {
+    var t = S.task(id);
+    if (!t || t.done) return;
+    var today = U.dayKey();
+    var slot = K.cal.nextFreeSlot(today, 60);
+    if (!slot) { toast('Heute ist keine Lücke mehr frei. Zieh die Aufgabe in den Kalender.'); return; }
+    var snap = S.snapshot();
+    S.addBlock(id, slot[0], slot[1]);
+    if (t.list !== 'today') S.updateTask(id, { list: 'today' });
+    toast('Eingeplant: heute ' + K.cal.hm(slot[0]) + '–' + K.cal.hm(slot[1]), snap);
+  }
   function toggleTimer(id) {
     var a = S.state.activeTimer;
     if (a && a.taskId === id) S.stopTimer();
@@ -705,6 +786,17 @@
     r.readAsText(file);
   }
 
+  function importIcsFile(file) {
+    var r = new FileReader();
+    r.onload = function () {
+      try {
+        var p = K.cal.importText(String(r.result), 'file');
+        toast(p.events.length + ' Termine aus ' + (file.name || 'der Datei') + ' übernommen');
+      } catch (err) { toast(err.message); }
+    };
+    r.readAsText(file);
+  }
+
   // Dateien und Text, die ins Fenster gezogen werden
   function handleDrop(dt) {
     var files = dt.files ? Array.prototype.slice.call(dt.files) : [];
@@ -725,7 +817,7 @@
           S.addTask({ title: name.replace(/\.msg$/i, '').trim(), source: 'mail' }, 'top');
           added++;
         } else if (/\.ics$/i.test(name)) {
-          toast('Kalender-Import kommt mit der Kalenderansicht in Phase 2.');
+          importIcsFile(f);
         } else {
           S.addTask({ title: name, notes: 'Datei: ' + name }, 'top');
           added++;
@@ -790,6 +882,36 @@
       case 'palette-run': runPalette(Number(el.getAttribute('data-idx'))); break;
       case 'palette-close-bg': if (e.target === el) closePalette(); break;
       case 'help': openModal({ type: 'help' }); break;
+      case 'plan': planTask(id); break;
+      case 'block-open': e.preventDefault(); openModal({ type: 'block', blockId: el.getAttribute('data-block') }); break;
+      case 'block-dur': {
+        var bb = S.block(ui.modal && ui.modal.blockId);
+        if (bb) { var st = new Date(bb.start).getTime(); S.updateBlock(bb.id, st, st + Number(el.getAttribute('data-min')) * 6e4); }
+        break;
+      }
+      case 'block-del': {
+        var bd = S.block(ui.modal && ui.modal.blockId);
+        if (bd) { var snapB = S.snapshot(); ui.modal = null; S.deleteBlock(bd.id); toast('Aus dem Kalender genommen', snapB); }
+        break;
+      }
+      case 'block-focus': {
+        var bf = S.block(ui.modal && ui.modal.blockId);
+        if (bf) { ui.modal = null; if (!S.state.activeTimer || S.state.activeTimer.taskId !== bf.taskId) S.startTimer(bf.taskId); startFocus(bf.taskId); }
+        break;
+      }
+      case 'week-prev': case 'week-next': {
+        var base = new Date((ui.weekStart || K.cal.mondayOf(U.dayKey())) + 'T12:00:00');
+        ui.weekStart = U.dayKey(U.addDays(base, act === 'week-prev' ? -7 : 7));
+        render(); break;
+      }
+      case 'week-today': ui.weekStart = null; render(); break;
+      case 'toggle-weekend': S.setSetting('showWeekend', !S.state.settings.showWeekend); break;
+      case 'cal-sync': K.cal.sync(true); break;
+      case 'cal-clear': {
+        var snapC = S.snapshot(); var keepUrl = S.state.calendar.url;
+        S.clearCalendar(); S.setCalendar({ url: keepUrl });
+        toast('Termine entfernt', snapC); break;
+      }
       case 'modal-close': closeModal(); break;
       case 'modal-close-bg': if (e.target === el) closeModal(); break;
     }
@@ -856,6 +978,13 @@
   function onChange(e) {
     var el = e.target;
     if (el.id === 'import-file' && el.files && el.files[0]) { importBackup(el.files[0]); el.value = ''; return; }
+    if (el.id === 'ics-file' && el.files && el.files[0]) { importIcsFile(el.files[0]); el.value = ''; return; }
+    if (el.id === 'cal-url') {
+      var url = el.value.trim();
+      S.setCalendar({ url: url, error: null });
+      if (url && !/\.html?(\?|$)/i.test(url)) K.cal.sync(true);
+      return;
+    }
     if (el.hasAttribute('data-area')) {
       var v = el.value.trim();
       if (el.getAttribute('data-field') === 'name' && !v) return;
@@ -962,6 +1091,9 @@
         e.preventDefault();
         if (ui.selectedId) startFocus(ui.selectedId); else go('fokus');
         return;
+      case 'p':
+        if (ui.selectedId) { e.preventDefault(); planTask(ui.selectedId); }
+        return;
       case 't':
         if (ui.view === 'fokus' && ui.focusTaskId) { toggleTimer(ui.focusTaskId); return; }
         if (ui.selectedId) toggleTimer(ui.selectedId);
@@ -1002,7 +1134,7 @@
   // ---- Drag & Drop: Sortieren und auf Listen ziehen
   var dragId = null;
   function onDragStart(e) {
-    var row = e.target.closest && e.target.closest('.task[draggable="true"]');
+    var row = e.target.closest && e.target.closest('.task[draggable="true"], .plan-chip[draggable="true"]');
     if (!row) return;
     dragId = row.getAttribute('data-id');
     e.dataTransfer.effectAllowed = 'move';
@@ -1014,6 +1146,9 @@
   }
   function onDragOver(e) {
     if (dragId) {
+      var tl = e.target.closest('.tl');
+      if (tl) { e.preventDefault(); clearDropMarks(); K.cal.showGhost(tl, e.clientY, 60); return; }
+      K.cal.hideGhost();
       var nav = e.target.closest('[data-drop-list]');
       var row = e.target.closest('.task');
       clearDropMarks();
@@ -1041,6 +1176,14 @@
     if (dragId) {
       e.preventDefault();
       var id = dragId;
+      var tlDrop = e.target.closest('.tl');
+      if (tlDrop) {
+        dragId = null;
+        var snapD = S.snapshot();
+        var b = K.cal.dropTask(id, tlDrop, e.clientY);
+        toast('Eingeplant: ' + K.cal.hm(new Date(b.start).getTime()) + '–' + K.cal.hm(new Date(b.end).getTime()), snapD);
+        return;
+      }
       var nav = e.target.closest('[data-drop-list]');
       var row = e.target.closest('.task');
       var before = row && row.classList.contains('drop-before');
@@ -1064,7 +1207,7 @@
     e.preventDefault();
     handleDrop(e.dataTransfer);
   }
-  function onDragEnd() { dragId = null; clearDropMarks(); $$('.is-dragging').forEach(function (el) { el.classList.remove('is-dragging'); }); }
+  function onDragEnd() { dragId = null; clearDropMarks(); K.cal.hideGhost(); $$('.is-dragging').forEach(function (el) { el.classList.remove('is-dragging'); }); }
 
   // ---- Erfassen über das Bookmarklet (?capture=1&t=…&u=…&s=…)
   function handleCapture() {
@@ -1085,12 +1228,14 @@
 
   // ------------------------------------------------------------------ Start
   function boot() {
+    K.app = { toast: toast, openModal: openModal, render: render };
     S.load();
     applyTheme();
     try { window.name = 'kompass'; } catch (e) { }
 
     var hash = (location.hash || '').replace('#', '');
     if (viewById(hash) || hash === 'fokus' || hash === 'optionen') ui.view = hash;
+    else if (hash === 'kalender-verbinden') ui.view = 'optionen';
     if (ui.view === 'fokus' && S.state.activeTimer) ui.focusTaskId = S.state.activeTimer.taskId;
     handleCapture();
 
@@ -1124,7 +1269,13 @@
     setInterval(tick, 1000);
     // Beim Tageswechsel neu zeichnen
     var lastDay = U.dayKey();
-    setInterval(function () { if (U.dayKey() !== lastDay) { lastDay = U.dayKey(); render(); } }, 60000);
+    setInterval(function () {
+      if (U.dayKey() !== lastDay) { lastDay = U.dayKey(); render(); return; }
+      // Jetzt-Linie und freie Zeit nachziehen, aber nicht mitten in einer Eingabe oder beim Ziehen
+      if ((ui.view === 'heute' || ui.view === 'kalender') && !ui.modal && !ui.palette && !K.cal.isDragging() && !dragId && !isTyping(document.activeElement)) render();
+    }, 60000);
+    K.cal.maybeAutoSync();
+    setInterval(K.cal.maybeAutoSync, 5 * 60000);
 
     try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) { }
     if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol) && location.hostname !== 'localhost') {

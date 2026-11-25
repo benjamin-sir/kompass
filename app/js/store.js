@@ -37,6 +37,10 @@
     ['Admin & Orga', '#7a8490']
   ];
 
+  function emptyCalendar() {
+    return { url: '', source: '', name: '', events: [], syncedAt: null, error: null };
+  }
+
   function emptyState() {
     var t = nowIso();
     return {
@@ -47,8 +51,10 @@
         return { id: uid(), name: a[0], color: a[1], order: i, createdAt: t, updatedAt: t };
       }),
       timeEntries: [],
+      blocks: [],
+      calendar: emptyCalendar(),
       activeTimer: null,
-      settings: { theme: 'system', dailyFocusTarget: 3, jiraBase: '', lastBackupAt: null, backupSnoozedUntil: null }
+      settings: { theme: 'system', dailyFocusTarget: 3, jiraBase: '', workStart: '08:00', workEnd: '17:00', showWeekend: false, lastBackupAt: null, backupSnoozedUntil: null }
     };
   }
 
@@ -90,6 +96,36 @@
     var end = new Date(start.getTime() + 50 * 60000);
     if (end > new Date()) { start = new Date(Date.now() - 55 * 60000); end = new Date(Date.now() - 5 * 60000); }
     s.timeEntries.push({ id: uid(), taskId: doneTask.id, start: start.toISOString(), end: end.toISOString(), example: true, createdAt: nowIso(), updatedAt: nowIso() });
+
+    // Beispiel-Termine, wie sie aus Outlook kämen, und zwei eingeplante Blöcke
+    var at = function (dayOffset, h, m) { var d = new Date(); d.setDate(d.getDate() + dayOffset); d.setHours(h, m, 0, 0); return d; };
+    var evs = [];
+    for (var off = -3; off <= 10; off++) {
+      var wd = at(off, 0, 0).getDay();
+      if (wd === 0 || wd === 6) continue;
+      evs.push(['Daily Standup', off, 9, 15, 15, 'busy', '']);
+      if (wd === 1) evs.push(['Wochenplanung PO-Team', off, 10, 0, 60, 'busy', '']);
+      if (wd === 2) { evs.push(['Refinement Team Shop', off, 13, 0, 90, 'busy', 'Raum 4.12']); evs.push(['1:1 Tech Lead', off, 16, 0, 30, 'busy', '']); }
+      if (wd === 3) { evs.push(['Stakeholder-Sync Vertrieb', off, 11, 0, 60, 'busy', 'Teams']); evs.push(['Sprint Review', off, 14, 0, 60, 'busy', '']); evs.push(['Architektur-Runde', off, 15, 30, 60, 'tentative', '']); }
+      if (wd === 4) evs.push(['Lunch & Learn', off, 12, 0, 60, 'free', '']);
+      if (wd === 5) evs.push(['Retro', off, 13, 0, 60, 'busy', '']);
+    }
+    s.calendar = emptyCalendar();
+    s.calendar.source = 'example';
+    s.calendar.name = 'Beispielkalender';
+    s.calendar.syncedAt = nowIso();
+    s.calendar.events = evs.map(function (e) {
+      var st = at(e[1], e[2], e[3]);
+      return { id: 'ex-' + e[0] + st.getTime(), title: e[0], location: e[6], allDay: false, busy: e[5], start: st.toISOString(), end: new Date(st.getTime() + e[4] * 6e4).toISOString() };
+    });
+    var planned = s.tasks.filter(function (t) { return t.list === 'today' && !t.done; });
+    if (planned[0]) s.blocks.push(newBlock(planned[0].id, at(0, 10, 30), at(0, 11, 30), true));
+    if (planned[1]) s.blocks.push(newBlock(planned[1].id, at(0, 15, 0), at(0, 15, 45), true));
+  }
+
+  function newBlock(taskId, start, end, example) {
+    var t = nowIso();
+    return { id: uid(), taskId: taskId, start: new Date(start).toISOString(), end: new Date(end).toISOString(), example: !!example, createdAt: t, updatedAt: t, deletedAt: null };
   }
 
   function migrate(s) {
@@ -99,6 +135,9 @@
     s.tasks = Array.isArray(s.tasks) ? s.tasks : [];
     s.areas = Array.isArray(s.areas) ? s.areas : base.areas;
     s.timeEntries = Array.isArray(s.timeEntries) ? s.timeEntries : [];
+    s.blocks = Array.isArray(s.blocks) ? s.blocks : [];
+    s.calendar = Object.assign(emptyCalendar(), s.calendar || {});
+    if (!Array.isArray(s.calendar.events)) s.calendar.events = [];
     s.settings = Object.assign({}, base.settings, s.settings || {});
     if (!s.createdAt) s.createdAt = nowIso();
     if (s.activeTimer === undefined) s.activeTimer = null;
@@ -204,6 +243,8 @@
     removeExamples: function () {
       state.tasks = state.tasks.filter(function (t) { return !t.example; });
       state.timeEntries = state.timeEntries.filter(function (e) { return !e.example; });
+      state.blocks = state.blocks.filter(function (b) { return !b.example; });
+      if (state.calendar.source === 'example') state.calendar = emptyCalendar();
       if (state.activeTimer && !store.task(state.activeTimer.taskId)) state.activeTimer = null;
       store.commit();
     },
@@ -266,6 +307,40 @@
       if (state.activeTimer && state.activeTimer.taskId === taskId) sum += (Date.now() - new Date(state.activeTimer.start)) / 1000;
       return sum;
     },
+
+    // ---- Zeitblöcke im Kalender ----
+    blocks: function () {
+      return state.blocks.filter(function (b) { return !b.deletedAt && store.task(b.taskId); });
+    },
+    blocksBetween: function (fromMs, toMs) {
+      return store.blocks().filter(function (b) { return new Date(b.end).getTime() > fromMs && new Date(b.start).getTime() < toMs; })
+        .sort(function (a, b) { return a.start.localeCompare(b.start); });
+    },
+    blocksOfTask: function (taskId) { return store.blocks().filter(function (b) { return b.taskId === taskId; }); },
+    block: function (id) { return state.blocks.find(function (b) { return b.id === id && !b.deletedAt; }) || null; },
+    addBlock: function (taskId, startMs, endMs) {
+      var b = newBlock(taskId, startMs, endMs, false);
+      state.blocks.push(b);
+      store.commit();
+      return b;
+    },
+    updateBlock: function (id, startMs, endMs) {
+      var b = store.block(id); if (!b) return;
+      b.start = new Date(startMs).toISOString(); b.end = new Date(endMs).toISOString(); b.updatedAt = nowIso();
+      store.commit();
+    },
+    deleteBlock: function (id) {
+      var b = store.block(id); if (!b) return;
+      b.deletedAt = nowIso(); b.updatedAt = b.deletedAt;
+      store.commit();
+    },
+
+    // ---- Outlook-Kalender (nur lesend) ----
+    eventsBetween: function (fromMs, toMs) {
+      return state.calendar.events.filter(function (e) { return new Date(e.end).getTime() > fromMs && new Date(e.start).getTime() < toMs; });
+    },
+    setCalendar: function (fields) { Object.assign(state.calendar, fields); store.commit(); },
+    clearCalendar: function () { state.calendar = emptyCalendar(); store.commit(); },
 
     // ---- Einstellungen ----
     setSetting: function (k, v) { state.settings[k] = v; store.commit(); }

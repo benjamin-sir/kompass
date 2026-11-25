@@ -398,6 +398,116 @@ a.chip.src:hover { border-color: currentColor; }
 }
 body.is-dropping #drop-hint { display: flex; }
 
+/* ---------- Kalender */
+.main-inner.is-wide { max-width: 1240px; }
+.today-grid { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 28px; align-items: start; }
+.today-main { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+.cap-inline { font-size: 13px; color: var(--fg-muted); font-variant-numeric: tabular-nums; }
+.cap-inline.is-over { color: var(--danger); font-weight: 600; }
+.day-panel {
+  position: sticky; top: 16px; display: flex; flex-direction: column; gap: 8px;
+  padding: 14px 12px 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface);
+  max-height: calc(100vh - 32px); min-width: 0;
+}
+.day-panel-head { display: flex; align-items: baseline; justify-content: space-between; padding: 0 4px; }
+.day-panel-head h2 { margin: 0; font: 600 15px var(--font-display); }
+.cap { margin: 0; padding: 0 4px; font-size: 12.5px; color: var(--fg-muted); font-variant-numeric: tabular-nums; }
+.cap.is-over { color: var(--danger); }
+.day-scroll { overflow-y: auto; min-height: 220px; flex: 1; margin: 0 -4px; padding: 6px 4px 6px 0; }
+.day-panel-foot { margin: 0; padding: 0 4px; font-size: 12px; color: var(--fg-faint); }
+.hint { margin: 0; padding: 0 4px; font-size: 12px; color: var(--fg-faint); }
+.linkbtn { border: 0; background: none; padding: 0; color: var(--accent); cursor: pointer; font-size: inherit; text-decoration: none; }
+.linkbtn:hover { text-decoration: underline; }
+.cal-status.is-error { color: var(--danger); }
+.cal-status.is-warn { color: var(--warn); }
+.cal-status a { color: var(--accent); }
+
+.tl-row { display: grid; grid-template-columns: 44px minmax(0, 1fr); }
+.tl-gutter { position: relative; }
+.tl-gutter span {
+  position: absolute; right: 8px; transform: translateY(-50%);
+  font: 11px var(--font-mono); color: var(--fg-faint); font-variant-numeric: tabular-nums;
+}
+.tl { position: relative; border-left: 1px solid var(--line); min-width: 0; }
+.tl-off { position: absolute; left: 0; right: 0; background: var(--bg); opacity: .8; }
+.tl-hour { position: absolute; left: 0; right: 0; border-top: 1px solid var(--line); }
+.tl-now { position: absolute; left: -4px; right: 0; border-top: 2px solid var(--danger); z-index: 4; pointer-events: none; }
+.tl-now::before { content: ""; position: absolute; left: 0; top: -5px; width: 8px; height: 8px; border-radius: 50%; background: var(--danger); }
+
+.ev {
+  position: absolute; z-index: 1; overflow: hidden; display: flex; flex-direction: column;
+  padding: 2px 6px; border-radius: 5px; font-size: 11.5px; line-height: 1.3;
+  background: var(--surface-2); color: var(--fg-muted); border-left: 3px solid var(--fg-faint);
+}
+.ev.is-short { flex-direction: row; gap: 6px; align-items: center; padding-top: 0; padding-bottom: 0; }
+.ev-t { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--fg); opacity: .8; }
+.ev-time { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
+.ev-tentative { background: repeating-linear-gradient(135deg, var(--surface-2) 0 6px, var(--bg) 6px 12px); border-left-style: dashed; }
+.ev-free { background: transparent; border: 1px dashed var(--line); border-left: 3px dashed var(--line); }
+.ev-oof { background: var(--warn-soft); border-left-color: var(--warn); }
+
+.blk {
+  position: absolute; left: 26%; right: 3px; z-index: 3; overflow: hidden;
+  display: flex; flex-direction: column; padding: 3px 8px 6px; border-radius: 6px;
+  background: color-mix(in srgb, var(--c) 20%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--c) 55%, var(--surface)); border-left: 4px solid var(--c);
+  box-shadow: 0 2px 6px rgba(15, 25, 40, .12); color: var(--fg);
+  font-size: 12px; line-height: 1.3; cursor: grab; touch-action: none; user-select: none;
+}
+.blk:focus-visible { outline: 2px solid var(--accent); }
+.blk.is-short { flex-direction: row; gap: 6px; align-items: center; padding-top: 0; padding-bottom: 0; }
+.blk-t { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.blk-time { color: var(--fg-muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.blk.is-done { opacity: .55; }
+.blk.is-done .blk-t { text-decoration: line-through; }
+.blk.is-running { box-shadow: 0 0 0 2px var(--accent), 0 2px 6px rgba(15, 25, 40, .12); }
+.blk.is-dragging { cursor: grabbing; opacity: .85; z-index: 5; }
+.blk-resize { position: absolute; left: 0; right: 0; bottom: 0; height: 7px; cursor: ns-resize; }
+.blk-resize::after { content: ""; position: absolute; left: 50%; bottom: 2px; width: 18px; height: 2px; margin-left: -9px; border-radius: 1px; background: var(--c); opacity: .5; }
+.tl-ghost {
+  position: absolute; left: 26%; right: 3px; z-index: 5; pointer-events: none;
+  border: 2px dashed var(--accent); border-radius: 6px; background: var(--accent-soft);
+  font: 600 11px var(--font-mono); color: var(--accent); padding: 2px 6px;
+}
+
+.allday { display: flex; flex-wrap: wrap; gap: 4px; padding: 0 4px; }
+.ev-chip { font-size: 11.5px; padding: 1px 6px; border-radius: 4px; background: var(--surface-2); color: var(--fg-muted); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ev-chip.ev-oof { background: var(--warn-soft); color: var(--warn); }
+.ev-chip.ev-free { background: transparent; border: 1px dashed var(--line); }
+
+.chip.block { border: 1px solid var(--accent-soft); background: var(--accent-soft); color: var(--accent); font-weight: 600; cursor: pointer; font-family: var(--font-ui); }
+
+.cal-nav { display: flex; gap: 6px; flex-wrap: wrap; }
+.plan-strip { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 10px 12px; border: 1px dashed var(--line); border-radius: var(--radius); }
+.plan-label { font-size: 12px; text-transform: uppercase; letter-spacing: .07em; color: var(--fg-muted); font-weight: 600; margin-right: 4px; }
+.plan-chip {
+  display: inline-flex; align-items: center; gap: 6px; max-width: 260px;
+  padding: 3px 9px; border-radius: 5px; border: 1px solid var(--line); background: var(--surface);
+  font-size: 12.5px; cursor: grab; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.plan-chip .dot { width: 7px; height: 7px; border-radius: 50%; flex: none; }
+.plan-chip.is-planned { color: var(--fg-faint); }
+.plan-chip:hover { border-color: var(--accent); }
+
+.wk-scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+.wk { display: grid; padding-bottom: 8px; }
+.wk-corner { border-bottom: 1px solid var(--line); }
+.wk-head { padding: 10px 8px 8px; border-bottom: 1px solid var(--line); border-left: 1px solid var(--line); display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.wk-head .allday { padding: 0; }
+.wk-date { font: 600 15px var(--font-display); }
+.wk-date span { font-weight: 400; color: var(--fg-muted); }
+.wk-head.is-today .wk-date { color: var(--accent); }
+.wk-cap { font-size: 11.5px; color: var(--fg-faint); font-variant-numeric: tabular-nums; }
+.wk-cap.is-over { color: var(--danger); font-weight: 600; }
+.wk > .tl-gutter { margin-top: 8px; }
+.wk > .tl { margin-top: 8px; }
+
+@media (max-width: 1180px) {
+  .today-grid { grid-template-columns: minmax(0, 1fr); }
+  .day-panel { position: static; max-height: none; }
+  .day-scroll { max-height: 460px; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition: none !important; animation: none !important; }
 }
@@ -478,6 +588,10 @@ body.is-dropping #drop-hint { display: flex; }
     ['Admin & Orga', '#7a8490']
   ];
 
+  function emptyCalendar() {
+    return { url: '', source: '', name: '', events: [], syncedAt: null, error: null };
+  }
+
   function emptyState() {
     var t = nowIso();
     return {
@@ -488,8 +602,10 @@ body.is-dropping #drop-hint { display: flex; }
         return { id: uid(), name: a[0], color: a[1], order: i, createdAt: t, updatedAt: t };
       }),
       timeEntries: [],
+      blocks: [],
+      calendar: emptyCalendar(),
       activeTimer: null,
-      settings: { theme: 'system', dailyFocusTarget: 3, jiraBase: '', lastBackupAt: null, backupSnoozedUntil: null }
+      settings: { theme: 'system', dailyFocusTarget: 3, jiraBase: '', workStart: '08:00', workEnd: '17:00', showWeekend: false, lastBackupAt: null, backupSnoozedUntil: null }
     };
   }
 
@@ -531,6 +647,36 @@ body.is-dropping #drop-hint { display: flex; }
     var end = new Date(start.getTime() + 50 * 60000);
     if (end > new Date()) { start = new Date(Date.now() - 55 * 60000); end = new Date(Date.now() - 5 * 60000); }
     s.timeEntries.push({ id: uid(), taskId: doneTask.id, start: start.toISOString(), end: end.toISOString(), example: true, createdAt: nowIso(), updatedAt: nowIso() });
+
+    // Beispiel-Termine, wie sie aus Outlook kämen, und zwei eingeplante Blöcke
+    var at = function (dayOffset, h, m) { var d = new Date(); d.setDate(d.getDate() + dayOffset); d.setHours(h, m, 0, 0); return d; };
+    var evs = [];
+    for (var off = -3; off <= 10; off++) {
+      var wd = at(off, 0, 0).getDay();
+      if (wd === 0 || wd === 6) continue;
+      evs.push(['Daily Standup', off, 9, 15, 15, 'busy', '']);
+      if (wd === 1) evs.push(['Wochenplanung PO-Team', off, 10, 0, 60, 'busy', '']);
+      if (wd === 2) { evs.push(['Refinement Team Shop', off, 13, 0, 90, 'busy', 'Raum 4.12']); evs.push(['1:1 Tech Lead', off, 16, 0, 30, 'busy', '']); }
+      if (wd === 3) { evs.push(['Stakeholder-Sync Vertrieb', off, 11, 0, 60, 'busy', 'Teams']); evs.push(['Sprint Review', off, 14, 0, 60, 'busy', '']); evs.push(['Architektur-Runde', off, 15, 30, 60, 'tentative', '']); }
+      if (wd === 4) evs.push(['Lunch & Learn', off, 12, 0, 60, 'free', '']);
+      if (wd === 5) evs.push(['Retro', off, 13, 0, 60, 'busy', '']);
+    }
+    s.calendar = emptyCalendar();
+    s.calendar.source = 'example';
+    s.calendar.name = 'Beispielkalender';
+    s.calendar.syncedAt = nowIso();
+    s.calendar.events = evs.map(function (e) {
+      var st = at(e[1], e[2], e[3]);
+      return { id: 'ex-' + e[0] + st.getTime(), title: e[0], location: e[6], allDay: false, busy: e[5], start: st.toISOString(), end: new Date(st.getTime() + e[4] * 6e4).toISOString() };
+    });
+    var planned = s.tasks.filter(function (t) { return t.list === 'today' && !t.done; });
+    if (planned[0]) s.blocks.push(newBlock(planned[0].id, at(0, 10, 30), at(0, 11, 30), true));
+    if (planned[1]) s.blocks.push(newBlock(planned[1].id, at(0, 15, 0), at(0, 15, 45), true));
+  }
+
+  function newBlock(taskId, start, end, example) {
+    var t = nowIso();
+    return { id: uid(), taskId: taskId, start: new Date(start).toISOString(), end: new Date(end).toISOString(), example: !!example, createdAt: t, updatedAt: t, deletedAt: null };
   }
 
   function migrate(s) {
@@ -540,6 +686,9 @@ body.is-dropping #drop-hint { display: flex; }
     s.tasks = Array.isArray(s.tasks) ? s.tasks : [];
     s.areas = Array.isArray(s.areas) ? s.areas : base.areas;
     s.timeEntries = Array.isArray(s.timeEntries) ? s.timeEntries : [];
+    s.blocks = Array.isArray(s.blocks) ? s.blocks : [];
+    s.calendar = Object.assign(emptyCalendar(), s.calendar || {});
+    if (!Array.isArray(s.calendar.events)) s.calendar.events = [];
     s.settings = Object.assign({}, base.settings, s.settings || {});
     if (!s.createdAt) s.createdAt = nowIso();
     if (s.activeTimer === undefined) s.activeTimer = null;
@@ -645,6 +794,8 @@ body.is-dropping #drop-hint { display: flex; }
     removeExamples: function () {
       state.tasks = state.tasks.filter(function (t) { return !t.example; });
       state.timeEntries = state.timeEntries.filter(function (e) { return !e.example; });
+      state.blocks = state.blocks.filter(function (b) { return !b.example; });
+      if (state.calendar.source === 'example') state.calendar = emptyCalendar();
       if (state.activeTimer && !store.task(state.activeTimer.taskId)) state.activeTimer = null;
       store.commit();
     },
@@ -707,6 +858,40 @@ body.is-dropping #drop-hint { display: flex; }
       if (state.activeTimer && state.activeTimer.taskId === taskId) sum += (Date.now() - new Date(state.activeTimer.start)) / 1000;
       return sum;
     },
+
+    // ---- Zeitblöcke im Kalender ----
+    blocks: function () {
+      return state.blocks.filter(function (b) { return !b.deletedAt && store.task(b.taskId); });
+    },
+    blocksBetween: function (fromMs, toMs) {
+      return store.blocks().filter(function (b) { return new Date(b.end).getTime() > fromMs && new Date(b.start).getTime() < toMs; })
+        .sort(function (a, b) { return a.start.localeCompare(b.start); });
+    },
+    blocksOfTask: function (taskId) { return store.blocks().filter(function (b) { return b.taskId === taskId; }); },
+    block: function (id) { return state.blocks.find(function (b) { return b.id === id && !b.deletedAt; }) || null; },
+    addBlock: function (taskId, startMs, endMs) {
+      var b = newBlock(taskId, startMs, endMs, false);
+      state.blocks.push(b);
+      store.commit();
+      return b;
+    },
+    updateBlock: function (id, startMs, endMs) {
+      var b = store.block(id); if (!b) return;
+      b.start = new Date(startMs).toISOString(); b.end = new Date(endMs).toISOString(); b.updatedAt = nowIso();
+      store.commit();
+    },
+    deleteBlock: function (id) {
+      var b = store.block(id); if (!b) return;
+      b.deletedAt = nowIso(); b.updatedAt = b.deletedAt;
+      store.commit();
+    },
+
+    // ---- Outlook-Kalender (nur lesend) ----
+    eventsBetween: function (fromMs, toMs) {
+      return state.calendar.events.filter(function (e) { return new Date(e.end).getTime() > fromMs && new Date(e.start).getTime() < toMs; });
+    },
+    setCalendar: function (fields) { Object.assign(state.calendar, fields); store.commit(); },
+    clearCalendar: function () { state.calendar = emptyCalendar(); store.commit(); },
 
     // ---- Einstellungen ----
     setSetting: function (k, v) { state.settings[k] = v; store.commit(); }
@@ -835,6 +1020,786 @@ body.is-dropping #drop-hint { display: flex; }
 
 </script>
 <script>
+/* Kompass – liest iCalendar-Dateien (.ics), wie Outlook sie veröffentlicht
+ * oder exportiert. Unterstützt Serientermine (RRULE mit DAILY, WEEKLY,
+ * MONTHLY, YEARLY, INTERVAL, COUNT, UNTIL, BYDAY, BYMONTHDAY, BYSETPOS),
+ * Ausnahmen (EXDATE), geänderte Einzeltermine (RECURRENCE-ID), Absagen,
+ * ganztägige Termine und Zeitzonen inklusive der Windows-Namen von Outlook. */
+(function (root) {
+  'use strict';
+
+  // Windows-Zeitzonen (Outlook) → IANA
+  var WIN_TZ = {
+    'W. Europe Standard Time': 'Europe/Berlin',
+    'Central Europe Standard Time': 'Europe/Budapest',
+    'Central European Standard Time': 'Europe/Warsaw',
+    'Romance Standard Time': 'Europe/Paris',
+    'GMT Standard Time': 'Europe/London',
+    'Greenwich Standard Time': 'Atlantic/Reykjavik',
+    'E. Europe Standard Time': 'Europe/Chisinau',
+    'FLE Standard Time': 'Europe/Helsinki',
+    'GTB Standard Time': 'Europe/Bucharest',
+    'Turkey Standard Time': 'Europe/Istanbul',
+    'Russian Standard Time': 'Europe/Moscow',
+    'Israel Standard Time': 'Asia/Jerusalem',
+    'Arabian Standard Time': 'Asia/Dubai',
+    'India Standard Time': 'Asia/Kolkata',
+    'China Standard Time': 'Asia/Shanghai',
+    'Singapore Standard Time': 'Asia/Singapore',
+    'Tokyo Standard Time': 'Asia/Tokyo',
+    'AUS Eastern Standard Time': 'Australia/Sydney',
+    'Eastern Standard Time': 'America/New_York',
+    'Central Standard Time': 'America/Chicago',
+    'Mountain Standard Time': 'America/Denver',
+    'Pacific Standard Time': 'America/Los_Angeles',
+    'UTC': 'UTC',
+    'Coordinated Universal Time': 'UTC'
+  };
+
+  var DAY = { SU: 0, MO: 1, TU: 2, WE: 3, TH: 4, FR: 5, SA: 6 };
+
+  function resolveZone(tzid) {
+    if (!tzid) return null;
+    tzid = tzid.replace(/^"|"$/g, '');
+    if (WIN_TZ[tzid]) return WIN_TZ[tzid];
+    if (/^[A-Za-z]+\/[A-Za-z_+\-\/]+$/.test(tzid) || tzid === 'UTC') {
+      try { new Intl.DateTimeFormat('en-US', { timeZone: tzid }); return tzid; } catch (e) { }
+    }
+    return null; // unbekannt: als Ortszeit des Rechners behandeln
+  }
+
+  /* Wandzeit in einer Zone → UTC-Millisekunden */
+  var fmtCache = {};
+  function zoneOffsetMs(utcMs, zone) {
+    var f = fmtCache[zone] || (fmtCache[zone] = new Intl.DateTimeFormat('en-US', {
+      timeZone: zone, hourCycle: 'h23', year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric', second: 'numeric'
+    }));
+    var p = {};
+    f.formatToParts(new Date(utcMs)).forEach(function (x) { p[x.type] = x.value; });
+    var asUtc = Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour % 24, +p.minute, +p.second);
+    return asUtc - Math.floor(utcMs / 1000) * 1000;
+  }
+  function wallToUtc(w, zone) {
+    if (zone === 'UTC') return Date.UTC(w.y, w.m, w.d, w.h, w.mi, w.s);
+    if (!zone) return new Date(w.y, w.m, w.d, w.h, w.mi, w.s).getTime();
+    var guess = Date.UTC(w.y, w.m, w.d, w.h, w.mi, w.s);
+    var off = zoneOffsetMs(guess, zone);
+    var t = guess - off;
+    var off2 = zoneOffsetMs(t, zone);
+    return off2 === off ? t : guess - off2;
+  }
+
+  // ---- Zeilen und Eigenschaften
+  function unfold(text) {
+    return text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').replace(/\n[ \t]/g, '').split('\n');
+  }
+  function parseLine(line) {
+    // NAME;PARAM=a;PARAM2="b:c":VALUE
+    var i = 0, inQ = false, colon = -1;
+    for (; i < line.length; i++) {
+      var c = line[i];
+      if (c === '"') inQ = !inQ;
+      else if (c === ':' && !inQ) { colon = i; break; }
+    }
+    if (colon < 0) return null;
+    var head = line.slice(0, colon), value = line.slice(colon + 1);
+    var parts = head.split(';');
+    var params = {};
+    for (var j = 1; j < parts.length; j++) {
+      var eq = parts[j].indexOf('=');
+      if (eq > 0) params[parts[j].slice(0, eq).toUpperCase()] = parts[j].slice(eq + 1).replace(/^"|"$/g, '');
+    }
+    return { name: parts[0].toUpperCase(), params: params, value: value };
+  }
+  function unescapeText(v) {
+    return v.replace(/\\n/gi, '\n').replace(/\\([,;\\])/g, '$1');
+  }
+
+  /* Datum/Zeit-Wert → {wall, zone, allDay, utc} */
+  function parseDate(prop) {
+    if (!prop) return null;
+    var v = prop.value.trim();
+    var m = v.match(/^(\d{4})(\d{2})(\d{2})(?:T(\d{2})(\d{2})(\d{2})?(Z)?)?$/);
+    if (!m) return null;
+    var wall = { y: +m[1], m: +m[2] - 1, d: +m[3], h: +(m[4] || 0), mi: +(m[5] || 0), s: +(m[6] || 0) };
+    var allDay = !m[4] || prop.params.VALUE === 'DATE';
+    var zone = m[7] ? 'UTC' : resolveZone(prop.params.TZID);
+    return { wall: wall, zone: allDay ? null : zone, allDay: allDay };
+  }
+  function toMs(dt) { return wallToUtc(dt.wall, dt.zone); }
+
+  function parseDuration(v) {
+    var m = /^([+-])?P(?:(\d+)W)?(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?)?$/.exec(v || '');
+    if (!m) return 0;
+    var ms = (+(m[2] || 0) * 7 * 864e5) + (+(m[3] || 0) * 864e5) + (+(m[4] || 0) * 36e5) + (+(m[5] || 0) * 6e4) + (+(m[6] || 0) * 1e3);
+    return m[1] === '-' ? -ms : ms;
+  }
+
+  function parseRule(v) {
+    var r = {};
+    v.split(';').forEach(function (kv) { var p = kv.split('='); if (p.length === 2) r[p[0].toUpperCase()] = p[1]; });
+    return r;
+  }
+
+  // ---- Wandzeit-Kalenderrechnung (ohne Zeitzone)
+  function daysInMonth(y, m) { return new Date(Date.UTC(y, m + 1, 0)).getUTCDate(); }
+  function weekday(y, m, d) { return new Date(Date.UTC(y, m, d)).getUTCDay(); }
+  function addDaysWall(w, n) {
+    var t = new Date(Date.UTC(w.y, w.m, w.d + n));
+    return { y: t.getUTCFullYear(), m: t.getUTCMonth(), d: t.getUTCDate(), h: w.h, mi: w.mi, s: w.s };
+  }
+  function cmpWall(a, b) {
+    return (a.y - b.y) || (a.m - b.m) || (a.d - b.d) || (a.h - b.h) || (a.mi - b.mi) || (a.s - b.s);
+  }
+
+  /* Tage eines Monats, die zu BYDAY (mit Ordinal) / BYMONTHDAY / BYSETPOS passen */
+  function monthDays(y, m, rule, dtWall) {
+    var dim = daysInMonth(y, m);
+    var days = [];
+    if (rule.BYMONTHDAY) {
+      rule.BYMONTHDAY.split(',').forEach(function (x) {
+        var n = +x; var d = n > 0 ? n : dim + n + 1;
+        if (d >= 1 && d <= dim) days.push(d);
+      });
+    } else if (rule.BYDAY) {
+      rule.BYDAY.split(',').forEach(function (tok) {
+        var mm = tok.match(/^([+-]?\d+)?(SU|MO|TU|WE|TH|FR|SA)$/);
+        if (!mm) return;
+        var wd = DAY[mm[2]];
+        var all = [];
+        for (var d = 1; d <= dim; d++) if (weekday(y, m, d) === wd) all.push(d);
+        if (mm[1]) {
+          var n = +mm[1];
+          var pick = n > 0 ? all[n - 1] : all[all.length + n];
+          if (pick) days.push(pick);
+        } else days = days.concat(all);
+      });
+    } else {
+      if (dtWall.d <= dim) days.push(dtWall.d);
+    }
+    days = days.filter(function (d, i, a) { return a.indexOf(d) === i; }).sort(function (a, b) { return a - b; });
+    if (rule.BYSETPOS) {
+      var sel = [];
+      rule.BYSETPOS.split(',').forEach(function (x) {
+        var n = +x; var d = n > 0 ? days[n - 1] : days[days.length + n];
+        if (d) sel.push(d);
+      });
+      days = sel.sort(function (a, b) { return a - b; });
+    }
+    return days;
+  }
+
+  /* Startzeitpunkte (Wandzeit) einer Serie bis `untilMs`, max. `limit` Stück */
+  function expandRule(dt, rule, fromMs, untilMs, limit) {
+    var freq = rule.FREQ;
+    var interval = Math.max(1, +(rule.INTERVAL || 1));
+    var count = rule.COUNT ? +rule.COUNT : Infinity;
+    var until = null;
+    if (rule.UNTIL) {
+      var u = parseDate({ value: rule.UNTIL, params: {} });
+      if (u) until = u.allDay ? wallToUtc({ y: u.wall.y, m: u.wall.m, d: u.wall.d, h: 23, mi: 59, s: 59 }, dt.zone) : wallToUtc(u.wall, u.zone || dt.zone);
+    }
+    var start = dt.wall;
+    var out = [];
+    var produced = 0, guard = 0;
+    function emit(w) {
+      if (cmpWall(w, start) < 0) return true;
+      var ms = wallToUtc(w, dt.zone);
+      if (until !== null && ms > until) return false;
+      if (ms > untilMs) return false;
+      if (produced >= count) return false;
+      produced++;
+      // Vorkommen weit vor dem Zeitraum zählen (für COUNT), aber nicht sammeln
+      if (ms >= fromMs - 864e5) out.push(w);
+      return out.length < limit;
+    }
+    var go = true;
+    if (freq === 'DAILY') {
+      var byday = rule.BYDAY ? rule.BYDAY.split(',').map(function (x) { return DAY[x.slice(-2)]; }) : null;
+      for (var i = 0; go && guard < 20000; i += interval, guard++) {
+        var w = addDaysWall(start, i);
+        if (byday && byday.indexOf(weekday(w.y, w.m, w.d)) < 0) continue;
+        go = emit(w);
+      }
+    } else if (freq === 'WEEKLY') {
+      var days = rule.BYDAY ? rule.BYDAY.split(',').map(function (x) { return DAY[x.slice(-2)]; }) : [weekday(start.y, start.m, start.d)];
+      var wkst = DAY[rule.WKST || 'MO'];
+      var sw = weekday(start.y, start.m, start.d);
+      var weekStart = addDaysWall(start, -((sw - wkst + 7) % 7));
+      var order = days.map(function (d) { return (d - wkst + 7) % 7; }).sort(function (a, b) { return a - b; });
+      for (var k = 0; go && guard < 5000; k += interval, guard++) {
+        for (var j = 0; go && j < order.length; j++) go = emit(addDaysWall(weekStart, k * 7 + order[j]));
+      }
+    } else if (freq === 'MONTHLY' || freq === 'YEARLY') {
+      var y = start.y, mo = start.m;
+      var months = rule.BYMONTH ? rule.BYMONTH.split(',').map(function (x) { return +x - 1; }) : [start.m];
+      for (; go && guard < 3000; guard++) {
+        var targetMonths = freq === 'MONTHLY' ? [mo] : months;
+        for (var t = 0; go && t < targetMonths.length; t++) {
+          var md = monthDays(y, targetMonths[t], rule, start);
+          for (var q = 0; go && q < md.length; q++) go = emit({ y: y, m: targetMonths[t], d: md[q], h: start.h, mi: start.mi, s: start.s });
+        }
+        if (freq === 'MONTHLY') { mo += interval; while (mo > 11) { mo -= 12; y++; } }
+        else y += interval;
+      }
+    } else {
+      emit(start);
+    }
+    return out;
+  }
+
+  function busyState(ev) {
+    var b = (ev.props['X-MICROSOFT-CDO-BUSYSTATUS'] || {}).value;
+    if (b) {
+      b = b.toUpperCase();
+      if (b === 'FREE') return 'free';
+      if (b === 'TENTATIVE') return 'tentative';
+      if (b === 'OOF') return 'oof';
+      if (b === 'WORKINGELSEWHERE') return 'free';
+      return 'busy';
+    }
+    var tr = (ev.props.TRANSP || {}).value;
+    if (tr && tr.toUpperCase() === 'TRANSPARENT') return 'free';
+    var st = (ev.props.STATUS || {}).value;
+    if (st && st.toUpperCase() === 'TENTATIVE') return 'tentative';
+    return 'busy';
+  }
+
+  /* Hauptfunktion: liefert Termine im Zeitraum [fromMs, toMs] */
+  function parse(text, winFrom, winTo) {
+    var lines = unfold(String(text || ''));
+    var events = [], cur = null, depth = 0, calName = '';
+    lines.forEach(function (raw) {
+      if (!raw) return;
+      var p = parseLine(raw);
+      if (!p) return;
+      if (p.name === 'BEGIN') {
+        if (p.value === 'VEVENT') { cur = { props: {}, exdates: [] }; depth = 0; }
+        else if (cur) depth++;
+        return;
+      }
+      if (p.name === 'END') {
+        if (p.value === 'VEVENT' && cur) { events.push(cur); cur = null; }
+        else if (cur) depth--;
+        return;
+      }
+      if (!cur) { if (p.name === 'X-WR-CALNAME') calName = unescapeText(p.value); return; }
+      if (depth > 0) return; // z. B. VALARM
+      if (p.name === 'EXDATE') {
+        p.value.split(',').forEach(function (v) { cur.exdates.push({ value: v, params: p.params }); });
+      } else if (!cur.props[p.name]) cur.props[p.name] = p;
+    });
+
+    var overrides = {}; // uid -> {recurMs: ev}
+    var masters = [];
+    events.forEach(function (ev) {
+      if (ev.props['RECURRENCE-ID']) {
+        var uid = (ev.props.UID || {}).value || '';
+        var rid = parseDate(ev.props['RECURRENCE-ID']);
+        if (rid) (overrides[uid] = overrides[uid] || {})[toMs(rid)] = ev;
+      } else masters.push(ev);
+    });
+
+    var out = [];
+    function pushOcc(ev, startMs, endMs, allDay, wall, endWall) {
+      var status = (ev.props.STATUS || {}).value;
+      if (status && status.toUpperCase() === 'CANCELLED') return;
+      if (endMs < winFrom || startMs > winTo) return;
+      var title = unescapeText((ev.props.SUMMARY || {}).value || '(ohne Titel)');
+      var item = {
+        id: ((ev.props.UID || {}).value || title) + '@' + startMs,
+        title: title,
+        location: unescapeText((ev.props.LOCATION || {}).value || ''),
+        allDay: allDay,
+        busy: busyState(ev),
+        start: new Date(startMs).toISOString(),
+        end: new Date(endMs).toISOString()
+      };
+      if (allDay) {
+        item.startDay = wall.y + '-' + pad(wall.m + 1) + '-' + pad(wall.d);
+        item.endDay = endWall.y + '-' + pad(endWall.m + 1) + '-' + pad(endWall.d); // exklusiv
+      }
+      out.push(item);
+    }
+
+    masters.forEach(function (ev) {
+      var dt = parseDate(ev.props.DTSTART);
+      if (!dt) return;
+      var startMs0 = toMs(dt);
+      var dtEnd = parseDate(ev.props.DTEND);
+      var durMs;
+      if (dtEnd) durMs = toMs(dtEnd) - startMs0;
+      else if (ev.props.DURATION) durMs = parseDuration(ev.props.DURATION.value);
+      else durMs = dt.allDay ? 864e5 : 0;
+      var durDays = dt.allDay ? Math.max(1, Math.round(durMs / 864e5)) : 0;
+      var uid = (ev.props.UID || {}).value || '';
+      var ov = overrides[uid] || {};
+
+      var starts;
+      if (ev.props.RRULE) {
+        starts = expandRule(dt, parseRule(ev.props.RRULE.value), winFrom - durMs, winTo, 2000);
+        var ex = {};
+        ev.exdates.forEach(function (e) {
+          var d = parseDate(e);
+          if (!d) return;
+          if (d.allDay && !dt.allDay) ex[d.wall.y * 1e4 + d.wall.m * 100 + d.wall.d] = true;
+          else ex[wallToUtc(d.wall, d.allDay || !e.params.TZID && !/Z$/.test(e.value) ? dt.zone : d.zone)] = true;
+        });
+        starts = starts.filter(function (w) {
+          var ms = wallToUtc(w, dt.zone);
+          return !ex[ms] && !ex[w.y * 1e4 + w.m * 100 + w.d];
+        });
+      } else starts = [dt.wall];
+
+      starts.forEach(function (w) {
+        var sMs = wallToUtc(w, dt.zone);
+        if (ov[sMs]) return; // wird unten als Einzeltermin eingefügt
+        if (dt.allDay) pushOcc(ev, sMs, wallToUtc(addDaysWall(w, durDays), null), true, w, addDaysWall(w, durDays));
+        else pushOcc(ev, sMs, sMs + durMs, false);
+      });
+    });
+
+    // Geänderte Einzeltermine
+    Object.keys(overrides).forEach(function (uid) {
+      Object.keys(overrides[uid]).forEach(function (k) {
+        var ev = overrides[uid][k];
+        var dt = parseDate(ev.props.DTSTART);
+        if (!dt) return;
+        var s = toMs(dt);
+        var de = parseDate(ev.props.DTEND);
+        var e = de ? toMs(de) : (ev.props.DURATION ? s + parseDuration(ev.props.DURATION.value) : s);
+        if (dt.allDay) {
+          var days = Math.max(1, Math.round((e - s) / 864e5));
+          pushOcc(ev, s, wallToUtc(addDaysWall(dt.wall, days), null), true, dt.wall, addDaysWall(dt.wall, days));
+        } else pushOcc(ev, s, e, false);
+      });
+    });
+
+    out.sort(function (a, b) { return a.start.localeCompare(b.start); });
+    return { name: calName, events: out, total: events.length };
+  }
+
+  function pad(n) { return (n < 10 ? '0' : '') + n; }
+
+  var api = { parse: parse, wallToUtc: wallToUtc, resolveZone: resolveZone };
+  if (typeof module !== 'undefined' && module.exports) module.exports = api;
+  else (root.K = root.K || {}).ics = api;
+})(typeof window !== 'undefined' ? window : this);
+
+</script>
+<script>
+/* Kompass – Kalender: Outlook-Termine (nur lesend) als Hintergrund,
+ * darüber die eigenen Zeitblöcke. Berechnet freie Zeit und die nächste Lücke. */
+(function (K) {
+  'use strict';
+
+  var S = K.store, U = K.util;
+  var SNAP = 15;
+
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function pad(n) { return (n < 10 ? '0' : '') + n; }
+  function hm(ms) { var d = new Date(ms); return pad(d.getHours()) + ':' + pad(d.getMinutes()); }
+  function minutesOf(str, fallback) {
+    var m = /^(\d{1,2}):(\d{2})$/.exec(str || '');
+    return m ? (+m[1]) * 60 + (+m[2]) : fallback;
+  }
+  function dayStart(day) { return new Date(day + 'T00:00:00').getTime(); }
+  function dayEnd(day) { return dayStart(U.dayKey(U.addDays(new Date(day + 'T12:00:00'), 1))); }
+  function atMin(day, min) { var d = new Date(day + 'T00:00:00'); d.setMinutes(min); return d.getTime(); }
+  function hours(ms) { return (ms / 36e5).toLocaleString('de-DE', { maximumFractionDigits: 1 }); }
+  function work(day) {
+    var s = S.state.settings;
+    var ws = minutesOf(s.workStart, 480), we = minutesOf(s.workEnd, 1020);
+    if (we <= ws) we = ws + 60;
+    return { ws: ws, we: we, from: atMin(day, ws), to: atMin(day, we) };
+  }
+
+  function merge(intervals) {
+    intervals.sort(function (a, b) { return a[0] - b[0]; });
+    var out = [];
+    intervals.forEach(function (iv) {
+      if (iv[1] <= iv[0]) return;
+      var last = out[out.length - 1];
+      if (last && iv[0] <= last[1]) last[1] = Math.max(last[1], iv[1]);
+      else out.push([iv[0], iv[1]]);
+    });
+    return out;
+  }
+  function clipSum(intervals, from, to) {
+    return intervals.reduce(function (sum, iv) { return sum + Math.max(0, Math.min(to, iv[1]) - Math.max(from, iv[0])); }, 0);
+  }
+
+  function dayEvents(day) {
+    var from = dayStart(day), to = dayEnd(day);
+    return S.eventsBetween(from, to).filter(function (e) {
+      if (!e.allDay) return true;
+      return e.startDay <= day && e.endDay > day;
+    });
+  }
+  function meetingIntervals(day) {
+    return dayEvents(day).filter(function (e) { return !e.allDay && e.busy !== 'free'; })
+      .map(function (e) { return [new Date(e.start).getTime(), new Date(e.end).getTime()]; });
+  }
+  function blockIntervals(day, exceptId) {
+    return S.blocksBetween(dayStart(day), dayEnd(day)).filter(function (b) { return b.id !== exceptId; })
+      .map(function (b) { return [new Date(b.start).getTime(), new Date(b.end).getTime()]; });
+  }
+
+  /* Arbeitszeit, Meetings, freie Zeit und eingeplante Zeit eines Tages */
+  function capacity(day) {
+    var w = work(day);
+    var total = w.to - w.from;
+    var oof = dayEvents(day).some(function (e) { return e.allDay && e.busy === 'oof'; });
+    var meeting = oof ? total : clipSum(merge(meetingIntervals(day)), w.from, w.to);
+    var free = Math.max(0, total - meeting);
+    var planned = clipSum(merge(blockIntervals(day)), dayStart(day), dayEnd(day));
+    return { total: total, meeting: meeting, free: free, planned: planned, over: planned > free + 5 * 6e4, oof: oof };
+  }
+  function capacityText(c) {
+    if (c.oof) return 'Abwesend';
+    return 'Meetings ' + hours(c.meeting) + ' h · frei ' + hours(c.free) + ' h · eingeplant ' + hours(c.planned) + ' h';
+  }
+
+  /* Nächste freie Lücke ab jetzt (heute) bzw. ab Arbeitsbeginn */
+  function nextFreeSlot(day, wantMin) {
+    var w = work(day);
+    var start = w.from;
+    if (day === U.dayKey()) {
+      var now = Date.now();
+      var rounded = Math.ceil(now / (SNAP * 6e4)) * SNAP * 6e4;
+      start = Math.max(start, rounded);
+    }
+    var busy = merge(meetingIntervals(day).concat(blockIntervals(day)));
+    var cursor = start;
+    var minGap = Math.min(30, wantMin) * 6e4;
+    for (var i = 0; i <= busy.length; i++) {
+      var gapEnd = i < busy.length ? Math.min(busy[i][0], w.to) : w.to;
+      if (i < busy.length && busy[i][1] <= cursor) continue;
+      if (gapEnd - cursor >= minGap) return [cursor, Math.min(gapEnd, cursor + wantMin * 6e4)];
+      if (i < busy.length) cursor = Math.max(cursor, busy[i][1]);
+      if (cursor >= w.to) break;
+    }
+    return null;
+  }
+
+  // ------------------------------------------------------------------ Darstellung
+  function hourRange(days) {
+    var w = work(days[0]);
+    var h0 = Math.max(0, Math.floor(w.ws / 60) - 1), h1 = Math.min(24, Math.ceil(w.we / 60) + 1);
+    days.forEach(function (day) {
+      var ds = dayStart(day);
+      dayEvents(day).filter(function (e) { return !e.allDay; }).concat(S.blocksBetween(ds, dayEnd(day))).forEach(function (e) {
+        var s = (new Date(e.start).getTime() - ds) / 36e5, en = (new Date(e.end).getTime() - ds) / 36e5;
+        if (s >= 0) h0 = Math.min(h0, Math.floor(s));
+        if (en <= 24) h1 = Math.max(h1, Math.ceil(en));
+      });
+    });
+    return [h0, Math.max(h1, h0 + 4)];
+  }
+
+  /* Nebeneinanderliegende Spuren für überlappende Termine */
+  function lanes(items) {
+    items.sort(function (a, b) { return a.s - b.s || b.e - a.e; });
+    var clusters = [], cur = null, curEnd = -Infinity;
+    items.forEach(function (it) {
+      if (!cur || it.s >= curEnd) { cur = []; clusters.push(cur); curEnd = it.e; }
+      else curEnd = Math.max(curEnd, it.e);
+      cur.push(it);
+    });
+    clusters.forEach(function (c) {
+      var laneEnds = [];
+      c.forEach(function (it) {
+        var l = laneEnds.findIndex(function (end) { return end <= it.s; });
+        if (l < 0) { l = laneEnds.length; laneEnds.push(it.e); } else laneEnds[l] = it.e;
+        it.lane = l;
+      });
+      c.forEach(function (it) { it.lanes = laneEnds.length; });
+    });
+    return items;
+  }
+
+  function column(day, h0, h1, px) {
+    var ds = dayStart(day);
+    var w = work(day);
+    var top = function (ms) { return ((ms - ds) / 36e5 - h0) * px; };
+    var html = '<div class="tl" data-day="' + day + '" data-h0="' + h0 + '" data-px="' + px + '" style="height:' + ((h1 - h0) * px) + 'px">';
+    var offTop = Math.max(0, (w.ws / 60 - h0) * px), offBottom = Math.max(0, (w.we / 60 - h0) * px);
+    if (offTop > 0) html += '<div class="tl-off" style="top:0;height:' + offTop + 'px"></div>';
+    if (offBottom < (h1 - h0) * px) html += '<div class="tl-off" style="top:' + offBottom + 'px;bottom:0"></div>';
+    for (var h = h0 + 1; h < h1; h++) html += '<div class="tl-hour" style="top:' + ((h - h0) * px) + 'px"></div>';
+
+    var evs = lanes(dayEvents(day).filter(function (e) { return !e.allDay; }).map(function (e) {
+      return { ev: e, s: new Date(e.start).getTime(), e: new Date(e.end).getTime() };
+    }));
+    evs.forEach(function (it) {
+      var y = Math.max(0, top(it.s)), y2 = Math.min((h1 - h0) * px, top(it.e));
+      var hgt = Math.max(14, y2 - y - 1);
+      var wPct = 100 / it.lanes;
+      var short = hgt < 30;
+      html += '<div class="ev ev-' + esc(it.ev.busy) + (short ? ' is-short' : '') + '" style="top:' + y + 'px;height:' + hgt + 'px;left:calc(' + (it.lane * wPct) + '% + 2px);width:calc(' + wPct + '% - 4px)" title="' + esc(hm(it.s) + '–' + hm(it.e) + ' ' + it.ev.title + (it.ev.location ? ' · ' + it.ev.location : '')) + '">' +
+        '<span class="ev-t">' + esc(it.ev.title) + '</span>' + (short ? '' : '<span class="ev-time">' + hm(it.s) + '–' + hm(it.e) + (it.ev.location ? ' · ' + esc(it.ev.location) : '') + '</span>') + '</div>';
+    });
+
+    lanes(S.blocksBetween(ds, dayEnd(day)).map(function (b) {
+      return { b: b, s: new Date(b.start).getTime(), e: new Date(b.end).getTime() };
+    })).forEach(function (it) {
+      var b = it.b, s = it.s, e = it.e;
+      var t = S.task(b.taskId);
+      var laneW = 74 / it.lanes;
+      var y = top(s), hgt = Math.max(16, top(e) - y - 1);
+      var area = t.areaId && S.area(t.areaId);
+      var running = S.state.activeTimer && S.state.activeTimer.taskId === t.id;
+      html += '<div class="blk' + (t.done ? ' is-done' : '') + (running ? ' is-running' : '') + (hgt < 34 ? ' is-short' : '') + '" data-block="' + esc(b.id) + '" style="top:' + y + 'px;height:' + hgt + 'px;left:calc(' + (26 + it.lane * laneW) + '% + 1px);width:calc(' + laneW + '% - 4px);--c:' + esc(area ? area.color : 'var(--accent)') + '" title="' + esc(hm(s) + '–' + hm(e) + ' ' + t.title) + '" tabindex="0">' +
+        '<span class="blk-t">' + esc(t.title) + '</span><span class="blk-time">' + hm(s) + '–' + hm(e) + '</span><i class="blk-resize" aria-hidden="true"></i></div>';
+    });
+
+    if (day === U.dayKey()) html += '<div class="tl-now" style="top:' + top(Date.now()) + 'px"></div>';
+    return html + '</div>';
+  }
+
+  function gutter(h0, h1, px) {
+    var html = '<div class="tl-gutter" style="height:' + ((h1 - h0) * px) + 'px">';
+    for (var h = h0 + 1; h < h1; h++) html += '<span style="top:' + ((h - h0) * px) + 'px">' + pad(h) + ':00</span>';
+    return html + '</div>';
+  }
+
+  function allDayChips(day) {
+    var ad = dayEvents(day).filter(function (e) { return e.allDay; });
+    if (!ad.length) return '';
+    return '<div class="allday">' + ad.map(function (e) { return '<span class="ev-chip ev-' + esc(e.busy) + '" title="' + esc(e.title) + '">' + esc(e.title) + '</span>'; }).join('') + '</div>';
+  }
+
+  function statusLine(inSettings) {
+    var c = S.state.calendar;
+    var link = function (label) { return inSettings ? '' : ' <a href="#optionen" data-act="nav" data-view="optionen">' + label + '</a>'; };
+    if (c.error) return '<span class="cal-status is-error">' + (c.error === 'cors' ? 'Outlook-Link konnte nicht direkt geladen werden.' : 'Kalender: ' + esc(c.error)) + link('Einstellungen') + '</span>';
+    if (!c.source) return '<span class="cal-status">Kein Outlook-Kalender verbunden.' + link('Verbinden') + '</span>';
+    var when = c.syncedAt ? new Date(c.syncedAt) : null;
+    var whenTxt = when ? (U.dayKey(when) === U.dayKey() ? 'heute ' + hm(when.getTime()) : when.toLocaleDateString('de-DE') + ' ' + hm(when.getTime())) : '';
+    var label = { url: 'Outlook-Link', file: 'Outlook-Datei', example: 'Beispielkalender' }[c.source] || 'Kalender';
+    var stale = c.source === 'file' && when && Date.now() - when.getTime() > 20 * 36e5;
+    return '<span class="cal-status' + (stale ? ' is-warn' : '') + '">' + label + (whenTxt ? ' · Stand ' + whenTxt : '') + (stale ? ' · bitte neu importieren' : '') +
+      (c.source === 'url' ? ' <button type="button" class="linkbtn" data-act="cal-sync">Aktualisieren</button>' : '') + '</span>';
+  }
+
+  /* Tagesansicht als Seitenspalte auf „Heute“ */
+  function dayPanel(day) {
+    var r = hourRange([day]);
+    var px = 46;
+    var c = capacity(day);
+    return '<aside class="day-panel" aria-label="Kalender heute">' +
+      '<div class="day-panel-head"><h2>Kalender</h2><a class="linkbtn" href="#kalender" data-act="nav" data-view="kalender">Woche ›</a></div>' +
+      '<p class="cap' + (c.over ? ' is-over' : '') + '">' + capacityText(c) + (c.over ? '<br><strong>Mehr eingeplant, als frei ist.</strong>' : '') + '</p>' +
+      allDayChips(day) +
+      '<div class="day-scroll" id="day-scroll"><div class="tl-row">' + gutter(r[0], r[1], px) + column(day, r[0], r[1], px) + '</div></div>' +
+      '<p class="day-panel-foot">' + statusLine() + '</p>' +
+      '<p class="hint">Aufgabe aus der Liste hierher ziehen oder <kbd>P</kbd> für die nächste Lücke.</p>' +
+    '</aside>';
+  }
+
+  function mondayOf(day) {
+    var d = new Date(day + 'T12:00:00');
+    var wd = (d.getDay() + 6) % 7;
+    return U.dayKey(U.addDays(d, -wd));
+  }
+  function isoWeek(day) {
+    var d = new Date(day + 'T12:00:00');
+    d.setDate(d.getDate() + 3 - (d.getDay() + 6) % 7);
+    var jan4 = new Date(d.getFullYear(), 0, 4);
+    return 1 + Math.round(((d - jan4) / 864e5 - 3 + (jan4.getDay() + 6) % 7) / 7);
+  }
+
+  /* Wochenansicht */
+  function weekView(weekStart, planTasks) {
+    var n = S.state.settings.showWeekend ? 7 : 5;
+    var days = [];
+    for (var i = 0; i < n; i++) days.push(U.dayKey(U.addDays(new Date(weekStart + 'T12:00:00'), i)));
+    var r = hourRange(days);
+    var px = 44;
+    var today = U.dayKey();
+    var last = days[days.length - 1];
+    var range = new Date(weekStart + 'T12:00:00').toLocaleDateString('de-DE', { day: 'numeric', month: 'short' }) + ' – ' + new Date(last + 'T12:00:00').toLocaleDateString('de-DE', { day: 'numeric', month: 'short', year: 'numeric' });
+
+    var html = '<header class="view-head"><div><h1>Kalender</h1><p class="sub">KW ' + isoWeek(weekStart) + ' · ' + esc(range) + '</p></div>' +
+      '<div class="cal-nav"><button type="button" class="btn" data-act="week-prev" aria-label="Vorige Woche">‹</button>' +
+      '<button type="button" class="btn" data-act="week-today">Diese Woche</button>' +
+      '<button type="button" class="btn" data-act="week-next" aria-label="Nächste Woche">›</button>' +
+      '<button type="button" class="btn ghost" data-act="toggle-weekend">' + (n === 7 ? 'Ohne Wochenende' : 'Mit Wochenende') + '</button></div></header>';
+
+    html += '<div class="plan-strip"><span class="plan-label">Zum Einplanen</span>' +
+      (planTasks.length ? planTasks.map(function (t) {
+        var area = t.areaId && S.area(t.areaId);
+        var has = S.blocksOfTask(t.id).some(function (b) { return b.start >= weekStart; });
+        return '<span class="plan-chip' + (has ? ' is-planned' : '') + '" draggable="true" data-id="' + esc(t.id) + '" title="In den Kalender ziehen">' +
+          '<i class="dot" style="background:' + esc(area ? area.color : 'var(--fg-faint)') + '"></i>' + esc(t.title) + '</span>';
+      }).join('') : '<span class="muted small">Nichts auf „Heute“ oder „Diese Woche“.</span>') + '</div>';
+
+    html += '<div class="wk-scroll"><div class="wk" style="grid-template-columns:48px repeat(' + n + ', minmax(150px, 1fr))">';
+    html += '<div class="wk-corner"></div>';
+    days.forEach(function (d) {
+      var c = capacity(d);
+      var date = new Date(d + 'T12:00:00');
+      html += '<div class="wk-head' + (d === today ? ' is-today' : '') + '"><div class="wk-date"><span>' + date.toLocaleDateString('de-DE', { weekday: 'short' }) + '</span> ' + date.getDate() + '.</div>' +
+        '<div class="wk-cap' + (c.over ? ' is-over' : '') + '" title="' + esc(capacityText(c)) + '">' + (c.oof ? 'Abwesend' : 'frei ' + hours(c.free) + ' h · geplant ' + hours(c.planned) + ' h') + '</div>' +
+        allDayChips(d) + '</div>';
+    });
+    html += gutter(r[0], r[1], px);
+    days.forEach(function (d) { html += column(d, r[0], r[1], px); });
+    html += '</div></div><p class="day-panel-foot">' + statusLine() + '</p>';
+    return html;
+  }
+
+  // ------------------------------------------------------------------ Position ↔ Zeit
+  function timeAt(tl, clientY) {
+    var rect = tl.getBoundingClientRect();
+    var px = +tl.getAttribute('data-px'), h0 = +tl.getAttribute('data-h0');
+    var min = ((clientY - rect.top) / px + h0) * 60;
+    min = Math.round(min / SNAP) * SNAP;
+    return Math.max(0, Math.min(24 * 60 - SNAP, min));
+  }
+
+  function showGhost(tl, clientY, durMin) {
+    hideGhost();
+    var px = +tl.getAttribute('data-px'), h0 = +tl.getAttribute('data-h0');
+    var min = timeAt(tl, clientY);
+    var g = document.createElement('div');
+    g.className = 'tl-ghost';
+    g.style.top = ((min / 60 - h0) * px) + 'px';
+    g.style.height = ((durMin || 60) / 60 * px) + 'px';
+    g.textContent = pad(Math.floor(min / 60)) + ':' + pad(min % 60);
+    tl.appendChild(g);
+  }
+  function hideGhost() { var g = document.querySelector('.tl-ghost'); if (g) g.remove(); }
+
+  function dropTask(taskId, tl, clientY) {
+    hideGhost();
+    var day = tl.getAttribute('data-day');
+    var min = timeAt(tl, clientY);
+    var s = atMin(day, min);
+    var b = S.addBlock(taskId, s, s + 60 * 6e4);
+    var t = S.task(taskId);
+    if (t && t.list !== 'today' && day === U.dayKey()) S.updateTask(taskId, { list: 'today' });
+    return b;
+  }
+
+  // ------------------------------------------------------------------ Verschieben und Größe ändern
+  var drag = null;
+  function onPointerDown(e) {
+    if (e.button !== 0) return;
+    var blk = e.target.closest('.blk');
+    if (!blk) return;
+    var tl = blk.closest('.tl');
+    var b = S.block(blk.getAttribute('data-block'));
+    if (!b) return;
+    drag = {
+      el: blk, tl: tl, id: b.id, mode: e.target.classList.contains('blk-resize') ? 'resize' : 'move',
+      startY: e.clientY, startX: e.clientX, moved: false,
+      s: new Date(b.start).getTime(), e: new Date(b.end).getTime(),
+      px: +tl.getAttribute('data-px'), h0: +tl.getAttribute('data-h0')
+    };
+    blk.setPointerCapture(e.pointerId);
+    e.preventDefault();
+  }
+  function onPointerMove(e) {
+    if (!drag) return;
+    var dy = e.clientY - drag.startY;
+    if (!drag.moved && Math.abs(dy) < 4 && Math.abs(e.clientX - drag.startX) < 4) return;
+    drag.moved = true;
+    drag.el.classList.add('is-dragging');
+    var deltaMin = Math.round(dy / drag.px * 60 / SNAP) * SNAP;
+    if (drag.mode === 'resize') {
+      var dur = Math.max(SNAP, Math.round((drag.e - drag.s) / 6e4) + deltaMin);
+      drag.newS = drag.s; drag.newE = drag.s + dur * 6e4;
+      drag.el.style.height = (dur / 60 * drag.px - 1) + 'px';
+      drag.el.querySelector('.blk-time').textContent = hm(drag.newS) + '–' + hm(drag.newE);
+      drag.target = drag.tl;
+      return;
+    }
+    // Spalte unter dem Zeiger (Wochenansicht)
+    drag.el.style.visibility = 'hidden';
+    var under = document.elementFromPoint(e.clientX, e.clientY);
+    drag.el.style.visibility = '';
+    var target = under && under.closest('.tl');
+    if (!target || target.getAttribute('data-px') !== String(drag.px)) target = drag.target || drag.tl;
+    if (target !== drag.el.parentElement) target.appendChild(drag.el);
+    drag.target = target;
+    var dayShift = Math.round((dayStart(target.getAttribute('data-day')) - dayStart(drag.tl.getAttribute('data-day'))) / 864e5);
+    var startMin = new Date(drag.s).getHours() * 60 + new Date(drag.s).getMinutes() + deltaMin;
+    var dur2 = (drag.e - drag.s) / 6e4;
+    startMin = Math.max(0, Math.min(24 * 60 - dur2, startMin));
+    var base = atMin(U.dayKey(U.addDays(new Date(drag.s), dayShift)), startMin);
+    drag.newS = base; drag.newE = base + dur2 * 6e4;
+    var h0 = +target.getAttribute('data-h0');
+    drag.el.style.top = ((startMin / 60 - h0) * drag.px) + 'px';
+    drag.el.querySelector('.blk-time').textContent = hm(drag.newS) + '–' + hm(drag.newE);
+  }
+  function onPointerUp() {
+    if (!drag) return;
+    var d = drag;
+    drag = null;
+    if (!d.moved) { K.app.openModal({ type: 'block', blockId: d.id }); return; }
+    if (d.newS != null) S.updateBlock(d.id, d.newS, d.newE);
+    else K.app.render();
+  }
+
+  // ------------------------------------------------------------------ Kalender laden
+  var syncing = false;
+  function normalizeUrl(u) {
+    u = String(u || '').trim();
+    if (/^webcals?:\/\//i.test(u)) u = u.replace(/^webcals?:/i, 'https:');
+    return u;
+  }
+  function importText(text, source) {
+    if (!/BEGIN:VCALENDAR/.test(text)) throw new Error('Das ist keine Kalenderdatei (.ics).');
+    var now = Date.now();
+    var parsed = K.ics.parse(text, now - 21 * 864e5, now + 120 * 864e5);
+    S.setCalendar({ events: parsed.events, name: parsed.name || '', source: source, syncedAt: U.nowIso(), error: null });
+    return parsed;
+  }
+  function sync(manual) {
+    var url = normalizeUrl(S.state.calendar.url);
+    if (!url || syncing) return Promise.resolve(false);
+    syncing = true;
+    return fetch(url, { cache: 'no-store', credentials: 'omit' }).then(function (res) {
+      if (!res.ok) throw new Error('Der Server antwortet mit Fehler ' + res.status + '. Stimmt der Link?');
+      return res.text();
+    }).then(function (text) {
+      var p = importText(text, 'url');
+      if (manual) K.app.toast(p.events.length + ' Termine aus Outlook geladen');
+      return true;
+    }).catch(function (err) {
+      var msg = err instanceof TypeError ? 'cors' : err.message;
+      S.setCalendar({ error: msg });
+      if (manual) K.app.toast(msg === 'cors' ? 'Direkter Abruf blockiert. Nimm den Datei-Import.' : msg);
+      return false;
+    }).then(function (ok) { syncing = false; return ok; });
+  }
+  function maybeAutoSync() {
+    var c = S.state.calendar;
+    if (!c.url || c.error === 'cors') return;
+    if (!c.syncedAt || c.source !== 'url' || Date.now() - new Date(c.syncedAt).getTime() > 15 * 6e4) sync(false);
+  }
+
+  document.addEventListener('pointerdown', onPointerDown);
+  document.addEventListener('pointermove', onPointerMove);
+  document.addEventListener('pointerup', onPointerUp);
+  document.addEventListener('pointercancel', function () { if (drag) { drag = null; K.app.render(); } });
+
+  K.cal = {
+    capacity: capacity, capacityText: capacityText, nextFreeSlot: nextFreeSlot,
+    dayPanel: dayPanel, weekView: weekView, mondayOf: mondayOf,
+    showGhost: showGhost, hideGhost: hideGhost, dropTask: dropTask,
+    sync: sync, maybeAutoSync: maybeAutoSync, importText: importText, normalizeUrl: normalizeUrl,
+    statusLine: statusLine, hm: hm, isDragging: function () { return !!drag; }
+  };
+})(window.K = window.K || {});
+
+</script>
+<script>
 /* Kompass – Oberfläche */
 (function (K) {
   'use strict';
@@ -877,11 +1842,12 @@ body.is-dropping #drop-hint { display: flex; }
   var VIEWS = [
     { id: 'inbox', label: 'Inbox', key: '1', list: 'inbox', hint: 'Alles, was reinkommt. Einmal am Tag sortieren.' },
     { id: 'heute', label: 'Heute', key: '2', list: 'today' },
-    { id: 'woche', label: 'Diese Woche', key: '3', list: 'week', hint: 'Steht an, aber nicht heute.' },
-    { id: 'spaeter', label: 'Später', key: '4', list: 'later', hint: 'Irgendwann, ohne Termin. Einmal pro Woche durchsehen.' },
-    { id: 'warten', label: 'Warten auf', key: '5', list: 'waiting', hint: 'Liegt bei jemand anderem. Mit Datum, wann du nachfasst.' },
-    { id: 'agenda', label: 'Agenda', key: '6', list: 'agenda', hint: 'Themen, die du im nächsten Gespräch mit dieser Person ansprichst.' },
-    { id: 'erledigt', label: 'Erledigt', key: '7' }
+    { id: 'kalender', label: 'Kalender', key: '3' },
+    { id: 'woche', label: 'Diese Woche', key: '4', list: 'week', hint: 'Steht an, aber nicht heute.' },
+    { id: 'spaeter', label: 'Später', key: '5', list: 'later', hint: 'Irgendwann, ohne Termin. Einmal pro Woche durchsehen.' },
+    { id: 'warten', label: 'Warten auf', key: '6', list: 'waiting', hint: 'Liegt bei jemand anderem. Mit Datum, wann du nachfasst.' },
+    { id: 'agenda', label: 'Agenda', key: '7', list: 'agenda', hint: 'Themen, die du im nächsten Gespräch mit dieser Person ansprichst.' },
+    { id: 'erledigt', label: 'Erledigt', key: '8' }
   ];
   var LIST_LABEL = { inbox: 'Inbox', today: 'Heute', week: 'Diese Woche', later: 'Später', waiting: 'Warten auf', agenda: 'Agenda' };
   var TRIAGE = [
@@ -900,7 +1866,8 @@ body.is-dropping #drop-hint { display: flex; }
     focusTaskId: null,
     modal: null,          // {type, ...}
     palette: null,        // {q, idx}
-    showDoneToday: false
+    showDoneToday: false,
+    weekStart: null       // Montag der angezeigten Kalenderwoche
   };
 
   // ------------------------------------------------------------------ Theme
@@ -963,11 +1930,23 @@ body.is-dropping #drop-hint { display: flex; }
     return '<span class="chip time' + (running ? ' is-running' : '') + '"' + (running ? ' data-timer="task" data-task="' + esc(t.id) + '"' : '') + '>' + (running ? fmtClock(sec) : fmtDur(sec)) + '</span>';
   }
 
+  function blockChip(t) {
+    if (t.done) return '';
+    var today = U.dayKey();
+    var bs = S.blocksOfTask(t.id).filter(function (b) { return b.end >= new Date().toISOString() || U.dayKey(b.start) === today; })
+      .sort(function (a, b) { return a.start.localeCompare(b.start); });
+    if (!bs.length) return '';
+    var b = bs[0];
+    var day = U.dayKey(b.start);
+    var label = (day === today ? '' : shortDate(day) + ' ') + K.cal.hm(new Date(b.start).getTime());
+    return '<button type="button" class="chip block" data-act="block-open" data-block="' + esc(b.id) + '" title="Eingeplant">◷ ' + esc(label) + (bs.length > 1 ? ' +' + (bs.length - 1) : '') + '</button>';
+  }
+
   function taskRow(t, opts) {
     opts = opts || {};
     var running = S.state.activeTimer && S.state.activeTimer.taskId === t.id;
     var sel = ui.selectedId === t.id;
-    var meta = [areaChip(t), sourceChip(t), opts.hidePerson ? '' : (t.person && !opts.hidePerson ? '<span class="chip person">' + esc(t.person) + '</span>' : ''), followChip(t), ageChip(t), timeChip(t), t.example ? '<span class="chip example">Beispiel</span>' : ''].join('');
+    var meta = [blockChip(t), areaChip(t), sourceChip(t), opts.hidePerson ? '' : (t.person && !opts.hidePerson ? '<span class="chip person">' + esc(t.person) + '</span>' : ''), followChip(t), ageChip(t), timeChip(t), t.example ? '<span class="chip example">Beispiel</span>' : ''].join('');
     var actions = '';
     if (!t.done) {
       if (t.list === 'inbox' || opts.triage) {
@@ -975,6 +1954,7 @@ body.is-dropping #drop-hint { display: flex; }
           return '<button type="button" class="tbtn" data-act="move" data-id="' + esc(t.id) + '" data-list="' + x.list + '" title="' + x.label + ' (' + x.key + ')">' + x.label + '</button>';
         }).join('');
       }
+      actions += '<button type="button" class="ibtn" data-act="plan" data-id="' + esc(t.id) + '" title="In die nächste freie Lücke (P)" aria-label="Einplanen">◷</button>';
       actions += '<button type="button" class="ibtn' + (running ? ' is-on' : '') + '" data-act="timer" data-id="' + esc(t.id) + '" title="' + (running ? 'Timer stoppen' : 'Timer starten') + ' (T)" aria-label="' + (running ? 'Timer stoppen' : 'Timer starten') + '">' + (running ? '❚❚' : '▶') + '</button>';
       actions += '<button type="button" class="ibtn" data-act="focus" data-id="' + esc(t.id) + '" title="Fokus (F)" aria-label="Fokus">◎</button>';
     } else {
@@ -1105,7 +2085,9 @@ body.is-dropping #drop-hint { display: flex; }
     var doneToday = S.tasks().filter(function (t) { return t.done && t.doneAt && U.dayKey(t.doneAt) === today; })
       .sort(function (a, b) { return b.doneAt.localeCompare(a.doneAt); });
 
-    var html = header(longDate(new Date()), '', right);
+    var cap = K.cal.capacity(today);
+    var html = header(longDate(new Date()), '<span class="cap-inline' + (cap.over ? ' is-over' : '') + '">' + esc(K.cal.capacityText(cap)) + '</span>', right);
+    html += '<div class="today-grid"><div class="today-main">';
     if (due.length) {
       html += '<section class="section"><h2 class="section-title is-warn">Nachfassen fällig <span>' + due.length + '</span></h2>' +
         '<ul class="tasks">' + due.map(function (t) {
@@ -1118,6 +2100,7 @@ body.is-dropping #drop-hint { display: flex; }
       html += '<section class="section"><button type="button" class="section-toggle" data-act="toggle-done-today" aria-expanded="' + ui.showDoneToday + '">Heute erledigt <span>' + doneToday.length + '</span></button>' +
         (ui.showDoneToday ? taskList(doneToday) : '') + '</section>';
     }
+    html += '</div>' + K.cal.dayPanel(today) + '</div>';
     return html;
   }
 
@@ -1217,9 +2200,14 @@ body.is-dropping #drop-hint { display: flex; }
             return '<button type="button" role="radio" aria-checked="' + (s.theme === k) + '" class="seg-btn' + (s.theme === k ? ' is-on' : '') + '" data-act="theme" data-theme-val="' + k + '">' + label + '</button>';
           }).join('') +
         '</div>' +
+        '<div class="field-row">' +
+          '<label class="field"><span>Arbeitsbeginn</span><input id="set-ws" type="time" step="900" value="' + esc(s.workStart) + '" data-setting="workStart" /></label>' +
+          '<label class="field"><span>Arbeitsende</span><input id="set-we" type="time" step="900" value="' + esc(s.workEnd) + '" data-setting="workEnd" /></label>' +
+        '</div>' +
         '<label class="field"><span>Fokusziel pro Tag (Stunden)</span><input id="set-target" type="number" min="0.5" max="12" step="0.5" value="' + esc(s.dailyFocusTarget) + '" data-setting="dailyFocusTarget" /></label>' +
       '</section>' +
 
+      calendarCard() +
       '<section class="card"><h2>Bereiche</h2><p class="muted">Sie ordnen deine Aufgaben thematisch. In der Eingabe mit <code>#Name</code> zuweisen, z. B. <code>#stake</code>.</p>' +
         '<ul class="areas">' + areas + '</ul>' +
         '<form class="area-add" data-act-form="area-add"><input id="area-new" type="text" placeholder="Neuer Bereich" aria-label="Neuer Bereich" /><button type="submit" class="btn">Hinzufügen</button></form>' +
@@ -1244,17 +2232,38 @@ body.is-dropping #drop-hint { display: flex; }
       '</section>';
   }
 
+  function calendarCard() {
+    var c = S.state.calendar;
+    var isHtml = /\.html?(\?|$)/i.test(c.url || '');
+    return '<section class="card" id="kalender-verbinden"><h2>Outlook-Kalender</h2>' +
+      '<p class="muted">Deine Termine erscheinen grau im Hintergrund von „Heute“ und „Kalender“. Kompass liest nur, ändert nichts in Outlook.</p>' +
+      '<p>' + K.cal.statusLine(true) + '</p>' +
+      '<label class="field"><span>Veröffentlichter ICS-Link</span><input id="cal-url" type="url" placeholder="https://outlook.office365.com/owa/calendar/…/calendar.ics" value="' + esc(c.url) + '" /></label>' +
+      (isHtml ? '<p class="banner is-warn">Das ist der HTML-Link. Kompass braucht den ICS-Link, der auf <code>.ics</code> endet.</p>' : '') +
+      '<div class="row-btns"><button type="button" class="btn primary" data-act="cal-sync"' + (c.url ? '' : ' disabled') + '>Jetzt laden</button>' +
+      (c.url ? '<a class="btn" href="' + esc(K.cal.normalizeUrl(c.url)) + '" target="_blank" rel="noopener">Link öffnen (lädt .ics-Datei)</a>' : '') +
+      '<label class="btn" for="ics-file">.ics-Datei importieren</label><input id="ics-file" type="file" accept=".ics,text/calendar" class="sr-only" />' +
+      (c.source ? '<button type="button" class="btn ghost danger" data-act="cal-clear">Termine entfernen</button>' : '') + '</div>' +
+      (c.error === 'cors'
+        ? '<div class="banner is-warn"><span>Outlook erlaubt nicht, dass eine Webseite den Kalender direkt abruft. So geht es trotzdem: <strong>Link öffnen</strong> klicken, Edge lädt <code>calendar.ics</code> herunter, die Datei in Kompass ziehen. Das dauert morgens etwa zehn Sekunden.</span></div>'
+        : '') +
+      '<p class="muted small">Der ICS-Link wirkt wie ein Passwort: Wer ihn hat, sieht deinen Kalender. Er bleibt in diesem Browser und steht auch im Backup.</p>' +
+    '</section>';
+  }
+
   function mainHTML() {
     var v = viewById(ui.view);
     var body;
     if (ui.view === 'heute') body = viewToday();
     else if (ui.view === 'fokus') body = viewFocus();
+    else if (ui.view === 'kalender') body = K.cal.weekView(ui.weekStart || K.cal.mondayOf(U.dayKey()), S.openIn('today').concat(S.openIn('week')));
     else if (ui.view === 'optionen') body = viewSettings();
     else if (ui.view === 'warten') body = viewWaiting(v);
     else if (ui.view === 'agenda') body = viewAgenda(v);
     else if (ui.view === 'erledigt') body = viewDone(v);
     else body = viewList(v);
-    return '<div class="main-inner' + (ui.view === 'fokus' ? ' is-focus' : '') + '">' + banners() + body + '</div>';
+    var cls = ui.view === 'fokus' ? ' is-focus' : (ui.view === 'heute' || ui.view === 'kalender') ? ' is-wide' : '';
+    return '<div class="main-inner' + cls + '">' + banners() + body + '</div>';
   }
 
   // ------------------------------------------------------------------ Overlays
@@ -1297,6 +2306,25 @@ body.is-dropping #drop-hint { display: flex; }
         '<p class="muted small">Erfasst ' + esc(new Date(e.createdAt).toLocaleString('de-DE')) + (S.secondsOnTask(e.id) ? ' · ' + fmtDur(S.secondsOnTask(e.id)) + ' Fokuszeit' : '') + '</p>' +
         '<div class="modal-btns"><button type="button" class="btn ghost danger" data-act="del" data-id="' + esc(e.id) + '">Löschen</button><span class="spacer"></span><button type="button" class="btn ghost" data-act="modal-close">Abbrechen</button><button type="submit" class="btn primary">Speichern</button></div>' +
       '</form>';
+    } else if (m.type === 'block') {
+      var b = S.block(m.blockId);
+      var bt = b && S.task(b.taskId);
+      if (!bt) return '';
+      var bs = new Date(b.start).getTime(), be = new Date(b.end).getTime();
+      var durNow = Math.round((be - bs) / 6e4);
+      inner = '<div class="modal-form">' +
+        '<p class="eyebrow">Eingeplant · ' + esc(shortDate(U.dayKey(b.start))) + ', ' + K.cal.hm(bs) + '–' + K.cal.hm(be) + '</p>' +
+        '<h2>' + esc(bt.title) + '</h2>' +
+        '<div class="task-meta">' + areaChip(bt) + sourceChip(bt) + '</div>' +
+        '<div class="field"><span>Dauer</span><div class="seg">' + [30, 45, 60, 90, 120].map(function (d) {
+          return '<button type="button" class="seg-btn' + (d === durNow ? ' is-on' : '') + '" data-act="block-dur" data-min="' + d + '">' + (d < 60 ? d + ' min' : (d / 60).toLocaleString('de-DE') + ' h') + '</button>';
+        }).join('') + '</div></div>' +
+        '<div class="modal-btns">' +
+          '<button type="button" class="btn ghost danger" data-act="block-del">Aus dem Kalender nehmen</button><span class="spacer"></span>' +
+          '<button type="button" class="btn" data-act="edit" data-id="' + esc(bt.id) + '">Bearbeiten</button>' +
+          (bt.done ? '' : '<button type="button" class="btn" data-act="done" data-id="' + esc(bt.id) + '">Erledigt</button>') +
+          (bt.done ? '' : '<button type="button" class="btn primary" data-act="block-focus">Fokus starten</button>') +
+        '</div></div>';
     } else if (m.type === 'confirm') {
       inner = '<form class="modal-form" data-act-form="confirm"><h2>' + esc(m.title) + '</h2><p>' + esc(m.text) + '</p>' +
         (m.typeWord ? '<label class="field"><span>Zum Bestätigen „' + esc(m.typeWord) + '“ eingeben</span><input id="confirm-word" type="text" autocomplete="off" /></label>' : '') +
@@ -1304,12 +2332,12 @@ body.is-dropping #drop-hint { display: flex; }
     } else if (m.type === 'help') {
       var rows = [
         [MOD + ' K', 'Suchen und springen'], ['N', 'Neue Aufgabe'], [MOD + ' V', 'Link oder Text in die Inbox einfügen'],
-        ['1 – 7', 'Listen wechseln'], ['J / K oder ↓ / ↑', 'Aufgabe auswählen'], ['E oder ↵', 'Bearbeiten'],
+        ['1 – 8', 'Listen und Kalender wechseln'], ['J / K oder ↓ / ↑', 'Aufgabe auswählen'], ['E oder ↵', 'Bearbeiten'],
         ['X oder ' + MOD + ' ↵', 'Erledigt'], ['H W S A G I', 'Nach Heute, Woche, Später, Warten, Agenda, Inbox'],
-        ['F', 'Fokus auf die Aufgabe'], ['T', 'Timer starten oder stoppen'], ['Entf', 'Löschen (mit Rückgängig)'], ['Esc', 'Schließen, Fokus verlassen']
+        ['P', 'In die nächste freie Lücke heute einplanen'], ['F', 'Fokus auf die Aufgabe'], ['T', 'Timer starten oder stoppen'], ['Entf', 'Löschen (mit Rückgängig)'], ['Esc', 'Schließen, Fokus verlassen']
       ];
       inner = '<div class="modal-form"><h2>Tastenkürzel</h2><table class="keys">' + rows.map(function (r) { return '<tr><td><kbd>' + esc(r[0]) + '</kbd></td><td>' + esc(r[1]) + '</td></tr>'; }).join('') + '</table>' +
-        '<p class="muted small">Aufgaben lassen sich per Drag & Drop sortieren oder auf einen Listennamen links ziehen.</p>' +
+        '<p class="muted small">Aufgaben lassen sich per Drag & Drop sortieren, auf einen Listennamen links oder in den Kalender ziehen. Blöcke im Kalender verschiebst du mit der Maus, die Länge änderst du am unteren Rand.</p>' +
         '<div class="modal-btns"><button type="button" class="btn primary" data-act="modal-close">Schließen</button></div></div>';
     }
     return '<div class="backdrop" data-act="modal-close-bg"><div class="modal" role="dialog" aria-modal="true">' + inner + '</div></div>';
@@ -1363,6 +2391,8 @@ body.is-dropping #drop-hint { display: flex; }
     var selStart = null, selEnd = null;
     try { if (activeId && active.selectionStart != null) { selStart = active.selectionStart; selEnd = active.selectionEnd; } } catch (e) { }
     var mainScroll = document.scrollingElement ? document.scrollingElement.scrollTop : 0;
+    var ds = $('#day-scroll');
+    var dayScroll = ds ? ds.scrollTop : null;
 
     $('#sidebar').innerHTML = sidebarHTML();
     $('#main').innerHTML = mainHTML();
@@ -1376,6 +2406,11 @@ body.is-dropping #drop-hint { display: flex; }
       }
     }
     if (document.scrollingElement) document.scrollingElement.scrollTop = mainScroll;
+    var ds2 = $('#day-scroll');
+    if (ds2) {
+      if (dayScroll != null) ds2.scrollTop = dayScroll;
+      else { var now = $('.tl-now', ds2); ds2.scrollTop = now ? Math.max(0, now.offsetTop - 90) : 0; }
+    }
     updateTitle();
   }
   function schedule() { if (!renderQueued) { renderQueued = true; requestAnimationFrame(render); } }
@@ -1468,6 +2503,17 @@ body.is-dropping #drop-hint { display: flex; }
     S.deleteTask(id);
     toast('Gelöscht: ' + t.title, snap);
   }
+  function planTask(id) {
+    var t = S.task(id);
+    if (!t || t.done) return;
+    var today = U.dayKey();
+    var slot = K.cal.nextFreeSlot(today, 60);
+    if (!slot) { toast('Heute ist keine Lücke mehr frei. Zieh die Aufgabe in den Kalender.'); return; }
+    var snap = S.snapshot();
+    S.addBlock(id, slot[0], slot[1]);
+    if (t.list !== 'today') S.updateTask(id, { list: 'today' });
+    toast('Eingeplant: heute ' + K.cal.hm(slot[0]) + '–' + K.cal.hm(slot[1]), snap);
+  }
   function toggleTimer(id) {
     var a = S.state.activeTimer;
     if (a && a.taskId === id) S.stopTimer();
@@ -1542,6 +2588,17 @@ body.is-dropping #drop-hint { display: flex; }
     r.readAsText(file);
   }
 
+  function importIcsFile(file) {
+    var r = new FileReader();
+    r.onload = function () {
+      try {
+        var p = K.cal.importText(String(r.result), 'file');
+        toast(p.events.length + ' Termine aus ' + (file.name || 'der Datei') + ' übernommen');
+      } catch (err) { toast(err.message); }
+    };
+    r.readAsText(file);
+  }
+
   // Dateien und Text, die ins Fenster gezogen werden
   function handleDrop(dt) {
     var files = dt.files ? Array.prototype.slice.call(dt.files) : [];
@@ -1562,7 +2619,7 @@ body.is-dropping #drop-hint { display: flex; }
           S.addTask({ title: name.replace(/\.msg$/i, '').trim(), source: 'mail' }, 'top');
           added++;
         } else if (/\.ics$/i.test(name)) {
-          toast('Kalender-Import kommt mit der Kalenderansicht in Phase 2.');
+          importIcsFile(f);
         } else {
           S.addTask({ title: name, notes: 'Datei: ' + name }, 'top');
           added++;
@@ -1627,6 +2684,36 @@ body.is-dropping #drop-hint { display: flex; }
       case 'palette-run': runPalette(Number(el.getAttribute('data-idx'))); break;
       case 'palette-close-bg': if (e.target === el) closePalette(); break;
       case 'help': openModal({ type: 'help' }); break;
+      case 'plan': planTask(id); break;
+      case 'block-open': e.preventDefault(); openModal({ type: 'block', blockId: el.getAttribute('data-block') }); break;
+      case 'block-dur': {
+        var bb = S.block(ui.modal && ui.modal.blockId);
+        if (bb) { var st = new Date(bb.start).getTime(); S.updateBlock(bb.id, st, st + Number(el.getAttribute('data-min')) * 6e4); }
+        break;
+      }
+      case 'block-del': {
+        var bd = S.block(ui.modal && ui.modal.blockId);
+        if (bd) { var snapB = S.snapshot(); ui.modal = null; S.deleteBlock(bd.id); toast('Aus dem Kalender genommen', snapB); }
+        break;
+      }
+      case 'block-focus': {
+        var bf = S.block(ui.modal && ui.modal.blockId);
+        if (bf) { ui.modal = null; if (!S.state.activeTimer || S.state.activeTimer.taskId !== bf.taskId) S.startTimer(bf.taskId); startFocus(bf.taskId); }
+        break;
+      }
+      case 'week-prev': case 'week-next': {
+        var base = new Date((ui.weekStart || K.cal.mondayOf(U.dayKey())) + 'T12:00:00');
+        ui.weekStart = U.dayKey(U.addDays(base, act === 'week-prev' ? -7 : 7));
+        render(); break;
+      }
+      case 'week-today': ui.weekStart = null; render(); break;
+      case 'toggle-weekend': S.setSetting('showWeekend', !S.state.settings.showWeekend); break;
+      case 'cal-sync': K.cal.sync(true); break;
+      case 'cal-clear': {
+        var snapC = S.snapshot(); var keepUrl = S.state.calendar.url;
+        S.clearCalendar(); S.setCalendar({ url: keepUrl });
+        toast('Termine entfernt', snapC); break;
+      }
       case 'modal-close': closeModal(); break;
       case 'modal-close-bg': if (e.target === el) closeModal(); break;
     }
@@ -1693,6 +2780,13 @@ body.is-dropping #drop-hint { display: flex; }
   function onChange(e) {
     var el = e.target;
     if (el.id === 'import-file' && el.files && el.files[0]) { importBackup(el.files[0]); el.value = ''; return; }
+    if (el.id === 'ics-file' && el.files && el.files[0]) { importIcsFile(el.files[0]); el.value = ''; return; }
+    if (el.id === 'cal-url') {
+      var url = el.value.trim();
+      S.setCalendar({ url: url, error: null });
+      if (url && !/\.html?(\?|$)/i.test(url)) K.cal.sync(true);
+      return;
+    }
     if (el.hasAttribute('data-area')) {
       var v = el.value.trim();
       if (el.getAttribute('data-field') === 'name' && !v) return;
@@ -1799,6 +2893,9 @@ body.is-dropping #drop-hint { display: flex; }
         e.preventDefault();
         if (ui.selectedId) startFocus(ui.selectedId); else go('fokus');
         return;
+      case 'p':
+        if (ui.selectedId) { e.preventDefault(); planTask(ui.selectedId); }
+        return;
       case 't':
         if (ui.view === 'fokus' && ui.focusTaskId) { toggleTimer(ui.focusTaskId); return; }
         if (ui.selectedId) toggleTimer(ui.selectedId);
@@ -1839,7 +2936,7 @@ body.is-dropping #drop-hint { display: flex; }
   // ---- Drag & Drop: Sortieren und auf Listen ziehen
   var dragId = null;
   function onDragStart(e) {
-    var row = e.target.closest && e.target.closest('.task[draggable="true"]');
+    var row = e.target.closest && e.target.closest('.task[draggable="true"], .plan-chip[draggable="true"]');
     if (!row) return;
     dragId = row.getAttribute('data-id');
     e.dataTransfer.effectAllowed = 'move';
@@ -1851,6 +2948,9 @@ body.is-dropping #drop-hint { display: flex; }
   }
   function onDragOver(e) {
     if (dragId) {
+      var tl = e.target.closest('.tl');
+      if (tl) { e.preventDefault(); clearDropMarks(); K.cal.showGhost(tl, e.clientY, 60); return; }
+      K.cal.hideGhost();
       var nav = e.target.closest('[data-drop-list]');
       var row = e.target.closest('.task');
       clearDropMarks();
@@ -1878,6 +2978,14 @@ body.is-dropping #drop-hint { display: flex; }
     if (dragId) {
       e.preventDefault();
       var id = dragId;
+      var tlDrop = e.target.closest('.tl');
+      if (tlDrop) {
+        dragId = null;
+        var snapD = S.snapshot();
+        var b = K.cal.dropTask(id, tlDrop, e.clientY);
+        toast('Eingeplant: ' + K.cal.hm(new Date(b.start).getTime()) + '–' + K.cal.hm(new Date(b.end).getTime()), snapD);
+        return;
+      }
       var nav = e.target.closest('[data-drop-list]');
       var row = e.target.closest('.task');
       var before = row && row.classList.contains('drop-before');
@@ -1901,7 +3009,7 @@ body.is-dropping #drop-hint { display: flex; }
     e.preventDefault();
     handleDrop(e.dataTransfer);
   }
-  function onDragEnd() { dragId = null; clearDropMarks(); $$('.is-dragging').forEach(function (el) { el.classList.remove('is-dragging'); }); }
+  function onDragEnd() { dragId = null; clearDropMarks(); K.cal.hideGhost(); $$('.is-dragging').forEach(function (el) { el.classList.remove('is-dragging'); }); }
 
   // ---- Erfassen über das Bookmarklet (?capture=1&t=…&u=…&s=…)
   function handleCapture() {
@@ -1922,12 +3030,14 @@ body.is-dropping #drop-hint { display: flex; }
 
   // ------------------------------------------------------------------ Start
   function boot() {
+    K.app = { toast: toast, openModal: openModal, render: render };
     S.load();
     applyTheme();
     try { window.name = 'kompass'; } catch (e) { }
 
     var hash = (location.hash || '').replace('#', '');
     if (viewById(hash) || hash === 'fokus' || hash === 'optionen') ui.view = hash;
+    else if (hash === 'kalender-verbinden') ui.view = 'optionen';
     if (ui.view === 'fokus' && S.state.activeTimer) ui.focusTaskId = S.state.activeTimer.taskId;
     handleCapture();
 
@@ -1961,7 +3071,13 @@ body.is-dropping #drop-hint { display: flex; }
     setInterval(tick, 1000);
     // Beim Tageswechsel neu zeichnen
     var lastDay = U.dayKey();
-    setInterval(function () { if (U.dayKey() !== lastDay) { lastDay = U.dayKey(); render(); } }, 60000);
+    setInterval(function () {
+      if (U.dayKey() !== lastDay) { lastDay = U.dayKey(); render(); return; }
+      // Jetzt-Linie und freie Zeit nachziehen, aber nicht mitten in einer Eingabe oder beim Ziehen
+      if ((ui.view === 'heute' || ui.view === 'kalender') && !ui.modal && !ui.palette && !K.cal.isDragging() && !dragId && !isTyping(document.activeElement)) render();
+    }, 60000);
+    K.cal.maybeAutoSync();
+    setInterval(K.cal.maybeAutoSync, 5 * 60000);
 
     try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) { }
     if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol) && location.hostname !== 'localhost') {

@@ -35,6 +35,8 @@ Ziel: eigene Termine nur lesend sehen und eigene Fokusblöcke darüberlegen.
 - „Kalender veröffentlichen“ (ICS-Link) ist in vielen Firmen abgeschaltet oder gibt nur Frei/Gebucht frei. Prüfen: Outlook Web → Einstellungen → Kalender → Freigegebene Kalender.
 - Selbst ein ICS-Link lässt sich aus der Web-App heraus voraussichtlich nicht direkt laden (CORS). Ein Proxy würde Firmentermine über einen fremden Server leiten; das scheidet aus.
 - Sicherer Weg für Phase 2: Kalender als `.ics`-Datei exportieren und in Kompass ziehen. Termine erscheinen grau im Hintergrund. Der ICS-Link wird trotzdem früh getestet.
+- Umsetzung (Phase 2): Kompass versucht zuerst den direkten Abruf über den ICS-Link. Schlägt der an CORS fehl, erklärt es den Weg über *Link öffnen → Datei hineinziehen*. Gespeichert werden nur die aufbereiteten Termine von drei Wochen zurück bis vier Monate voraus.
+- Freie Zeit = Arbeitszeit minus Meetings (gebucht, mit Vorbehalt, abwesend). Als „frei“ markierte Termine zählen nicht. Wer mehr einplant als frei ist, sieht eine Warnung.
 
 ## Später
 

@@ -1,7 +1,7 @@
 /* Kompass – Offline-Cache. Netz zuerst, damit Updates sofort ankommen;
  * ohne Netz kommt die zuletzt geladene Version aus dem Cache. */
-var CACHE = 'kompass-v1';
-var FILES = ['./', 'index.html', 'styles.css', 'js/store.js', 'js/links.js', 'js/app.js', 'manifest.webmanifest', 'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png'];
+var CACHE = 'kompass-v2';
+var FILES = ['./', 'index.html', 'styles.css', 'js/store.js', 'js/links.js', 'js/ics.js', 'js/calendar.js', 'js/app.js', 'manifest.webmanifest', 'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png'];
 
 self.addEventListener('install', function (e) {
   e.waitUntil(caches.open(CACHE).then(function (c) { return c.addAll(FILES); }).then(function () { return self.skipWaiting(); }));

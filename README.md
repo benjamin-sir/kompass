@@ -20,7 +20,7 @@ Es gibt zwei Wege, sie zu starten:
 |---|---|---|
 | Erfassen | Inbox | Text oder Link eintippen, `Strg+V` irgendwo in der App, Mail aus Outlook ins Fenster ziehen, Bookmarklet in Jira/Confluence |
 | Sortieren | Inbox | Aufgabe wählen (`J`/`K`), dann `H` Heute, `W` Woche, `S` Später, `A` Warten auf, `G` Agenda, `Entf` Löschen |
-| Planen | Heute | Reihenfolge per Drag & Drop, Aufgaben auf Listen links ziehen |
+| Planen | Heute, Kalender | Aufgabe in die Zeitleiste ziehen oder `P` für die nächste freie Lücke; Outlook-Termine liegen grau im Hintergrund |
 | Arbeiten | Fokus | `F` öffnet eine Aufgabe im Fokus, `T` startet den Timer, `Strg+Enter` erledigt sie |
 | Nachfassen | Heute, Warten auf | Fällige Warten-auf-Einträge erscheinen oben auf „Heute“ |
 
@@ -32,6 +32,16 @@ Alle Kürzel zeigt `?` in der App. `Strg+K` sucht über alle Aufgaben und Befehl
 - **Teams:** Nachricht → *⋯ → Link kopieren*, dann in Kompass `Strg+V`.
 - **Outlook (Desktop):** Mail aus der Liste ins Kompass-Fenster ziehen. Der Betreff wird zum Titel. Ein Rücksprung in die Mail ist von der Desktop-App aus nicht möglich.
 - **`#Bereich`** in der Eingabe ordnet die Aufgabe einem Bereich zu (`#stake` → Stakeholder).
+
+## Outlook-Kalender
+
+Kompass zeigt deine Outlook-Termine nur lesend an und legt deine eigenen Zeitblöcke darüber. Pro Tag rechnet es aus, wie viel Arbeitszeit nach den Meetings frei bleibt und wie viel du schon eingeplant hast.
+
+1. In Outlook Web unter *Einstellungen → Kalender → Freigegebene Kalender → Kalender veröffentlichen* den **ICS-Link** kopieren (endet auf `.ics`, nicht den HTML-Link).
+2. In Kompass unter *Einstellungen → Outlook-Kalender* einfügen. Kompass lädt die Termine und aktualisiert sie alle 15 Minuten.
+3. Blockiert der Browser den direkten Abruf (Outlook sendet dafür womöglich keine CORS-Freigabe), zeigt Kompass das an. Dann: *Link öffnen* klicken, Edge lädt `calendar.ics` herunter, die Datei in Kompass ziehen.
+
+Der ICS-Link wirkt wie ein Passwort. Er bleibt im Browser und steht im Backup.
 
 ## Backup
 
@@ -47,6 +57,8 @@ app/
   js/links.js           Erkennung von Jira, Confluence, Teams, Outlook, SharePoint
   js/app.js             Oberfläche, Tastenkürzel, Drag & Drop
   sw.js, manifest       Offline-Betrieb und Installation als App
+  js/ics.js             liest .ics-Dateien inkl. Serienterminen und Zeitzonen
+  js/calendar.js        Zeitleiste, Wochenansicht, freie Zeit, Zeitblöcke
 tools/build_single.py   baut dist/kompass.html
 ```
 
@@ -55,6 +67,6 @@ Nach Änderungen in `app/` die Einzeldatei neu bauen: `python3 tools/build_singl
 ## Stand und nächste Schritte
 
 - [x] Phase 1: Inbox mit Link-Erkennung, Bookmarklet, Drag & Drop aus Outlook, Sortieren, Heute, Woche, Später, Warten auf, Agenda, Fokus mit Timer, Suche, Tastenkürzel, Themes, Backup
-- [ ] Phase 2: Tages- und Wochenkalender mit Drag & Drop, Outlook-Termine per `.ics` als Hintergrund, freie Kapazität pro Tag
+- [x] Phase 2: Tageszeitleiste auf „Heute“, Wochenkalender, Zeitblöcke per Drag & Drop (verschieben, Länge ändern), `P` plant in die nächste Lücke, Outlook-Termine per ICS-Link oder `.ics`-Datei, freie Zeit pro Tag
 - [ ] Phase 3: Wochenrückblick (Fokus- vs. Meetingzeit, Erledigtes, Überfälliges), Bereiche und Ziele
 - [ ] Später: Sync mit dem iPhone; Microsoft-Graph-Anbindung, falls die IT sie erlaubt
