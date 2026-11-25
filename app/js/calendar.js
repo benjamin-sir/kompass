@@ -292,7 +292,7 @@
     var s = atMin(day, min);
     var b = S.addBlock(taskId, s, s + 60 * 6e4);
     var t = S.task(taskId);
-    if (t && t.list !== 'today' && day === U.dayKey()) S.updateTask(taskId, { list: 'today' });
+    if (t && !t.done && t.planDate !== day && ['waiting', 'agenda'].indexOf(t.list) < 0) S.planOn(taskId, day);
     return b;
   }
 

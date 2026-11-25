@@ -40,6 +40,31 @@
     ['Admin & Orga', AREA_COLORS[4], null]
   ];
 
+  function sundayOf(d) { var x = new Date(d); x.setDate(x.getDate() + (7 - x.getDay()) % 7); return dayKey(x); }
+  function listForDate(day) {
+    var today = dayKey();
+    if (day <= today) return 'today';
+    if (day <= sundayOf(new Date())) return 'week';
+    return 'later';
+  }
+  var REPEATS = { daily: 'Täglich', weekdays: 'Werktags', weekly: 'Wöchentlich', biweekly: 'Alle 2 Wochen', monthly: 'Monatlich' };
+  function nextOccurrence(from, repeat) {
+    var base = new Date(from + 'T12:00:00');
+    var today = new Date(dayKey() + 'T12:00:00');
+    if (base < today) base = today; // überfällige Serien laufen ab heute weiter
+    var d = new Date(base);
+    if (repeat === 'daily') d.setDate(d.getDate() + 1);
+    else if (repeat === 'weekdays') { do { d.setDate(d.getDate() + 1); } while (d.getDay() === 0 || d.getDay() === 6); }
+    else if (repeat === 'weekly') d.setDate(d.getDate() + 7);
+    else if (repeat === 'biweekly') d.setDate(d.getDate() + 14);
+    else if (repeat === 'monthly') {
+      var want = new Date(from + 'T12:00:00').getDate();
+      d = new Date(base.getFullYear(), base.getMonth() + 1, 1, 12);
+      d.setDate(Math.min(want, new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate()));
+    } else d.setDate(d.getDate() + 7);
+    return dayKey(d);
+  }
+
   function emptyCalendar() {
     return { url: '', source: '', name: '', events: [], syncedAt: null, error: null };
   }
@@ -67,6 +92,7 @@
     var task = {
       id: uid(), title: '', notes: '', url: '', source: '', sourceKey: '',
       list: 'inbox', areaId: null, person: '', followUp: null,
+      planDate: null, repeat: null, nextId: null,
       done: false, doneAt: null, order: 0, example: false,
       listChangedAt: t, createdAt: t, updatedAt: t, deletedAt: null
     };
@@ -90,8 +116,12 @@
       { title: 'Priorität des Login-Bugs auf Mobile klären', list: 'agenda', person: 'Tech Lead', areaId: area(1) },
       { title: 'Feedback zur neuen Story-Vorlage einholen', list: 'agenda', person: 'Team-Retro', areaId: area(3) }
     ];
+    ex.push({ title: 'Release-Kommunikation an Stakeholder vorbereiten', planDate: dayKey(addWorkdays(today, 1)), areaId: area(2) });
+    ex.push({ title: 'Sprint-Review-Demo durchspielen', planDate: dayKey(addWorkdays(today, 2)), areaId: area(0), repeat: 'biweekly' });
+    ex.push({ title: 'Jira-Board aufräumen', planDate: dayKey(addWorkdays(today, 1)), areaId: area(4), repeat: 'weekly' });
     ex.forEach(function (f, i) {
       f.example = true; f.order = i;
+      if (f.planDate) f.list = listForDate(f.planDate);
       s.tasks.push(newTask(f));
     });
     var doneTask = newTask({ title: 'Release Notes 4.2 abgestimmt', list: 'today', done: true, doneAt: nowIso(), example: true, areaId: area(0) });
@@ -233,6 +263,13 @@
     updateTask: function (id, fields) {
       var t = store.task(id);
       if (!t) return null;
+      // Wer eine Aufgabe von Hand in eine Liste legt, löst sie vom Plandatum
+      if (fields.list && fields.planDate === undefined && fields.list !== t.list) {
+        fields.planDate = fields.list === 'today' ? dayKey() : null;
+      }
+      if (fields.planDate && !fields.list && ['inbox', 'today', 'week', 'later'].indexOf(t.list) >= 0) {
+        fields.list = listForDate(fields.planDate);
+      }
       if (fields.list && fields.list !== t.list) {
         var peers = store.openIn(fields.list);
         fields.order = peers.length ? peers[peers.length - 1].order + 1 : 0;
@@ -249,8 +286,45 @@
       t.done = done;
       t.doneAt = done ? nowIso() : null;
       t.updatedAt = nowIso();
+      if (done && t.repeat && !t.nextId) {
+        // Wiederkehrend: nächstes Vorkommen anlegen
+        var next = nextOccurrence(t.planDate || dayKey(), t.repeat);
+        var copy = newTask({
+          title: t.title, notes: '', url: t.url, source: t.source, sourceKey: t.sourceKey,
+          areaId: t.areaId, repeat: t.repeat, planDate: next, list: listForDate(next), order: t.order
+        });
+        state.tasks.push(copy);
+        t.nextId = copy.id;
+      } else if (!done && t.nextId) {
+        // Wieder geöffnet: das automatisch angelegte nächste Vorkommen zurücknehmen, solange es unberührt ist
+        var n = store.task(t.nextId);
+        if (n && !n.done && n.createdAt === n.updatedAt) n.deletedAt = nowIso();
+        t.nextId = null;
+      }
       store.commit();
     },
+    planOn: function (id, day, orderedIds) {
+      var t = store.task(id);
+      if (!t) return;
+      var fields = { planDate: day, done: false, doneAt: null };
+      if (['waiting', 'agenda'].indexOf(t.list) < 0) fields.list = listForDate(day);
+      if (fields.list && fields.list !== t.list) fields.listChangedAt = nowIso();
+      Object.assign(t, fields, { updatedAt: nowIso() });
+      if (orderedIds) orderedIds.forEach(function (oid, i) { var x = store.task(oid); if (x) x.order = i; });
+      store.commit();
+    },
+    /* Beim Start und beim Tageswechsel: geplante Aufgaben in die passende Liste rücken */
+    syncPlanDates: function () {
+      var changed = false;
+      state.tasks.forEach(function (t) {
+        if (t.deletedAt || t.done || !t.planDate) return;
+        if (['inbox', 'today', 'week', 'later'].indexOf(t.list) < 0) return;
+        var want = listForDate(t.planDate);
+        if (want !== t.list) { t.list = want; t.listChangedAt = nowIso(); t.updatedAt = nowIso(); changed = true; }
+      });
+      if (changed) store.commit();
+    },
+    recurring: function () { return store.tasks().filter(function (t) { return t.repeat && !t.done; }); },
     deleteTask: function (id) {
       var t = store.task(id);
       if (!t) return;
@@ -389,6 +463,6 @@
     setSetting: function (k, v) { state.settings[k] = v; store.commit(); }
   };
 
-  K.util = { uid: uid, dayKey: dayKey, addDays: addDays, addWorkdays: addWorkdays, nowIso: nowIso };
+  K.util = { uid: uid, dayKey: dayKey, addDays: addDays, addWorkdays: addWorkdays, nowIso: nowIso, listForDate: listForDate, nextOccurrence: nextOccurrence, REPEATS: REPEATS };
   K.store = store;
 })(window.K = window.K || {});

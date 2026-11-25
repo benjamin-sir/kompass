@@ -40,13 +40,14 @@
   var VIEWS = [
     { id: 'inbox', label: 'Inbox', key: '1', list: 'inbox', hint: 'Alles, was reinkommt. Einmal am Tag sortieren.' },
     { id: 'heute', label: 'Heute', key: '2', list: 'today' },
-    { id: 'kalender', label: 'Kalender', key: '3' },
-    { id: 'woche', label: 'Diese Woche', key: '4', list: 'week', hint: 'Steht an, aber nicht heute.' },
-    { id: 'spaeter', label: 'Später', key: '5', list: 'later', hint: 'Irgendwann, ohne Termin. Einmal pro Woche durchsehen.' },
-    { id: 'warten', label: 'Warten auf', key: '6', list: 'waiting', hint: 'Liegt bei jemand anderem. Mit Datum, wann du nachfasst.' },
-    { id: 'agenda', label: 'Agenda', key: '7', list: 'agenda', hint: 'Themen, die du im nächsten Gespräch mit dieser Person ansprichst.' },
-    { id: 'erledigt', label: 'Erledigt', key: '8' },
-    { id: 'rueckblick', label: 'Rückblick', key: '9' }
+    { id: 'plan', label: 'Plan', key: '3' },
+    { id: 'kalender', label: 'Kalender', key: '4' },
+    { id: 'woche', label: 'Diese Woche', key: '5', list: 'week', hint: 'Steht an, aber nicht heute. Aufgaben mit Datum rücken am Tag selbst auf „Heute“.' },
+    { id: 'spaeter', label: 'Später', key: '6', list: 'later', hint: 'Irgendwann oder ab nächster Woche. Einmal pro Woche durchsehen.' },
+    { id: 'warten', label: 'Warten auf', key: '7', list: 'waiting', hint: 'Liegt bei jemand anderem. Mit Datum, wann du nachfasst.' },
+    { id: 'agenda', label: 'Agenda', key: '8', list: 'agenda', hint: 'Themen, die du im nächsten Gespräch mit dieser Person ansprichst.' },
+    { id: 'erledigt', label: 'Erledigt', key: '9' },
+    { id: 'rueckblick', label: 'Rückblick', key: '0' }
   ];
   var LIST_LABEL = { inbox: 'Inbox', today: 'Heute', week: 'Diese Woche', later: 'Später', waiting: 'Warten auf', agenda: 'Agenda' };
   var TRIAGE = [
@@ -67,7 +68,10 @@
     palette: null,        // {q, idx}
     showDoneToday: false,
     weekStart: null,      // Montag der angezeigten Kalenderwoche
-    reviewWeek: null      // Montag der Woche im Rückblick
+    reviewWeek: null,     // Montag der Woche im Rückblick
+    planFilter: null,     // Bereich, nach dem die Plan-Ansicht filtert
+    planFilterOpen: false,
+    planShowDone: false
   };
 
   // ------------------------------------------------------------------ Theme
@@ -142,11 +146,18 @@
     return '<button type="button" class="chip block" data-act="block-open" data-block="' + esc(b.id) + '" title="Eingeplant">◷ ' + esc(label) + (bs.length > 1 ? ' +' + (bs.length - 1) : '') + '</button>';
   }
 
+  function planChip(t) {
+    var out = '';
+    if (!t.done && t.planDate && t.planDate > U.dayKey()) out += '<span class="chip plan" title="Geplant für">' + esc(shortDate(t.planDate)) + '</span>';
+    if (t.repeat) out += '<span class="chip rep" title="' + esc(U.REPEATS[t.repeat] || '') + '">↻ ' + esc(U.REPEATS[t.repeat] || '') + '</span>';
+    return out;
+  }
+
   function taskRow(t, opts) {
     opts = opts || {};
     var running = S.state.activeTimer && S.state.activeTimer.taskId === t.id;
     var sel = ui.selectedId === t.id;
-    var meta = [blockChip(t), areaChip(t), sourceChip(t), opts.hidePerson ? '' : (t.person && !opts.hidePerson ? '<span class="chip person">' + esc(t.person) + '</span>' : ''), followChip(t), ageChip(t), timeChip(t), t.example ? '<span class="chip example">Beispiel</span>' : ''].join('');
+    var meta = [blockChip(t), planChip(t), areaChip(t), sourceChip(t), opts.hidePerson ? '' : (t.person && !opts.hidePerson ? '<span class="chip person">' + esc(t.person) + '</span>' : ''), followChip(t), ageChip(t), timeChip(t), t.example ? '<span class="chip example">Beispiel</span>' : ''].join('');
     var actions = '';
     if (!t.done) {
       if (t.list === 'inbox' || opts.triage) {
@@ -461,6 +472,7 @@
     var body;
     if (ui.view === 'heute') body = viewToday();
     else if (ui.view === 'fokus') body = viewFocus();
+    else if (ui.view === 'plan') body = K.plan.view(ui);
     else if (ui.view === 'rueckblick') body = K.review.view(ui.reviewWeek || K.cal.mondayOf(U.dayKey()));
     else if (ui.view === 'kalender') body = K.cal.weekView(ui.weekStart || K.cal.mondayOf(U.dayKey()), S.openIn('today').concat(S.openIn('week')));
     else if (ui.view === 'optionen') body = viewSettings();
@@ -468,7 +480,7 @@
     else if (ui.view === 'agenda') body = viewAgenda(v);
     else if (ui.view === 'erledigt') body = viewDone(v);
     else body = viewList(v);
-    var cls = ui.view === 'fokus' ? ' is-focus' : (ui.view === 'heute' || ui.view === 'kalender' || ui.view === 'rueckblick') ? ' is-wide' : '';
+    var cls = ui.view === 'plan' ? ' is-plan' : ui.view === 'fokus' ? ' is-focus' : (ui.view === 'heute' || ui.view === 'kalender' || ui.view === 'rueckblick') ? ' is-wide' : '';
     return '<div class="main-inner' + cls + '">' + banners() + body + '</div>';
   }
 
@@ -508,10 +520,17 @@
           '<label class="field"><span>Nachfassen am</span><input id="ed-follow" type="date" value="' + esc(e.followUp || '') + '" /></label>' +
         '</div>' +
         '<datalist id="people-list2">' + ppl + '</datalist>' +
+        '<div class="field-row">' +
+          '<label class="field"><span>Geplant für</span><input id="ed-plan" type="date" value="' + esc(e.planDate || '') + '" /></label>' +
+          '<label class="field"><span>Wiederholen</span><select id="ed-repeat"><option value="">Nicht wiederholen</option>' +
+            Object.keys(U.REPEATS).map(function (k) { return '<option value="' + k + '"' + (e.repeat === k ? ' selected' : '') + '>' + U.REPEATS[k] + '</option>'; }).join('') + '</select></label>' +
+        '</div>' +
         '<label class="field"><span>Notizen</span><textarea id="ed-notes" rows="5">' + esc(e.notes) + '</textarea></label>' +
         '<p class="muted small">Erfasst ' + esc(new Date(e.createdAt).toLocaleString('de-DE')) + (S.secondsOnTask(e.id) ? ' · ' + fmtDur(S.secondsOnTask(e.id)) + ' Fokuszeit' : '') + '</p>' +
         '<div class="modal-btns"><button type="button" class="btn ghost danger" data-act="del" data-id="' + esc(e.id) + '">Löschen</button><span class="spacer"></span><button type="button" class="btn ghost" data-act="modal-close">Abbrechen</button><button type="submit" class="btn primary">Speichern</button></div>' +
       '</form>';
+    } else if (m.type === 'recurring') {
+      inner = K.plan.recurringModal();
     } else if (m.type === 'block') {
       var b = S.block(m.blockId);
       var bt = b && S.task(b.taskId);
@@ -538,7 +557,7 @@
     } else if (m.type === 'help') {
       var rows = [
         [MOD + ' K', 'Suchen und springen'], ['N', 'Neue Aufgabe'], [MOD + ' V', 'Link oder Text in die Inbox einfügen'],
-        ['1 – 9', 'Listen, Kalender und Rückblick wechseln'], ['J / K oder ↓ / ↑', 'Aufgabe auswählen'], ['E oder ↵', 'Bearbeiten'],
+        ['1 – 9, 0', 'Ansichten wechseln (3 Plan, 4 Kalender, 0 Rückblick)'], ['J / K oder ↓ / ↑', 'Aufgabe auswählen'], ['E oder ↵', 'Bearbeiten'],
         ['X oder ' + MOD + ' ↵', 'Erledigt'], ['H W S A G I', 'Nach Heute, Woche, Später, Warten, Agenda, Inbox'],
         ['P', 'In die nächste freie Lücke heute einplanen'], ['F', 'Fokus auf die Aufgabe'], ['T', 'Timer starten oder stoppen'], ['Entf', 'Löschen (mit Rückgängig)'], ['Esc', 'Schließen, Fokus verlassen']
       ];
@@ -599,6 +618,8 @@
     var mainScroll = document.scrollingElement ? document.scrollingElement.scrollTop : 0;
     var ds = $('#day-scroll');
     var dayScroll = ds ? ds.scrollTop : null;
+    var ps = $('#plan-scroll');
+    var planScroll = ps ? ps.scrollLeft : null;
 
     $('#sidebar').innerHTML = sidebarHTML();
     $('#main').innerHTML = mainHTML();
@@ -616,6 +637,11 @@
     if (ds2) {
       if (dayScroll != null) ds2.scrollTop = dayScroll;
       else { var now = $('.tl-now', ds2); ds2.scrollTop = now ? Math.max(0, now.offsetTop - 90) : 0; }
+    }
+    var ps2 = $('#plan-scroll');
+    if (ps2) {
+      if (planScroll != null) { ps2.scrollLeft = planScroll; K.plan.updateMonth(); }
+      else K.plan.scrollToToday(false);
     }
     updateTitle();
   }
@@ -725,7 +751,7 @@
     if (a && a.taskId === id) S.stopTimer();
     else S.startTimer(id);
   }
-  function visibleIds() { return $$('#main .task').map(function (el) { return el.getAttribute('data-id'); }); }
+  function visibleIds() { return $$('#main .task, #main .pcard').map(function (el) { return el.getAttribute('data-id'); }); }
   function selectNeighbor(id) {
     var ids = visibleIds();
     var i = ids.indexOf(id);
@@ -733,8 +759,8 @@
   }
   function select(id, scroll) {
     ui.selectedId = id;
-    $$('#main .task').forEach(function (el) { el.classList.toggle('is-selected', el.getAttribute('data-id') === id); });
-    if (scroll) { var row = $('#main .task.is-selected'); if (row) row.scrollIntoView({ block: 'nearest' }); }
+    $$('#main .task, #main .pcard').forEach(function (el) { el.classList.toggle('is-selected', el.getAttribute('data-id') === id); });
+    if (scroll) { var row = $('#main .is-selected'); if (row) row.scrollIntoView({ block: 'nearest', inline: 'nearest' }); }
   }
   function openModal(m) {
     ui.modal = m;
@@ -751,7 +777,7 @@
   function closePalette(silent) { if (ui.palette) { ui.palette = null; if (!silent) render(); } }
 
   // Freitext oder Link anlegen
-  function captureText(text, list, extra) {
+  function captureText(text, list, extra, position) {
     text = String(text || '').trim();
     if (!text) return null;
     var areaId = null;
@@ -763,7 +789,13 @@
     }
     var p = L.parse(text, S.state.settings.jiraBase);
     var fields = Object.assign({ title: p.title, url: p.url, source: p.source, sourceKey: p.sourceKey, list: list || 'inbox', areaId: areaId }, extra || {});
-    return S.addTask(fields, (list || 'inbox') === 'inbox' ? 'top' : 'bottom');
+    return S.addTask(fields, position || ((list || 'inbox') === 'inbox' ? 'top' : 'bottom'));
+  }
+  function planAdd(day, position) {
+    var input = document.getElementById('plan-add-' + day);
+    if (!input || !input.value.trim()) { if (input) input.focus(); return; }
+    var t = captureText(input.value, U.listForDate(day), { planDate: day }, position);
+    if (t) { input.value = ''; toast('Geplant für ' + shortDate(day) + ': ' + t.title); }
   }
 
   function exportBackup() {
@@ -844,6 +876,7 @@
   // ------------------------------------------------------------------ Ereignisse
   function onClick(e) {
     var el = e.target.closest('[data-act]');
+    if (ui.planFilterOpen && !(el && /^plan-filter/.test(el.getAttribute('data-act')))) { ui.planFilterOpen = false; render(); }
     if (!el) return;
     var act = el.getAttribute('data-act');
     var id = el.getAttribute('data-id');
@@ -891,6 +924,13 @@
       case 'palette-close-bg': if (e.target === el) closePalette(); break;
       case 'help': openModal({ type: 'help' }); break;
       case 'plan': planTask(id); break;
+      case 'plan-today': K.plan.scrollToToday(true); break;
+      case 'plan-recurring': openModal({ type: 'recurring' }); break;
+      case 'plan-toggle-done': ui.planShowDone = !ui.planShowDone; render(); break;
+      case 'plan-filter-toggle': ui.planFilterOpen = !ui.planFilterOpen; render(); break;
+      case 'plan-filter': ui.planFilter = el.getAttribute('data-area') || null; ui.planFilterOpen = false; render(); break;
+      case 'plan-add-top': planAdd(el.getAttribute('data-day'), 'top'); break;
+      case 'repeat-stop': { var snapR = S.snapshot(); S.updateTask(id, { repeat: null }); toast('Wird nicht mehr wiederholt', snapR); break; }
       case 'reveal': { var rt = S.task(id); if (rt) revealTask(rt); break; }
       case 'review-prev': case 'review-next': {
         var rb = new Date((ui.reviewWeek || K.cal.mondayOf(U.dayKey())) + 'T12:00:00');
@@ -952,6 +992,7 @@
       return;
     }
     var kind = form.getAttribute('data-act-form');
+    if (kind === 'plan-add') { planAdd(form.getAttribute('data-day'), 'bottom'); return; }
     if (kind === 'person') {
       var m = ui.modal;
       var person = $('#person-input').value.trim();
@@ -974,15 +1015,19 @@
         areaId: $('#ed-area').value || null,
         person: $('#ed-person').value.trim(),
         followUp: $('#ed-follow').value || null,
-        notes: $('#ed-notes').value
+        notes: $('#ed-notes').value,
+        planDate: $('#ed-plan').value || null,
+        repeat: $('#ed-repeat').value || null
       };
       var cur = S.task(id);
+      if (upd.repeat && !upd.planDate) upd.planDate = upd.list === 'today' ? U.dayKey() : U.nextOccurrence(U.dayKey(), upd.repeat);
       if (url !== cur.url) {
         if (url) { var d = L.detect(url); upd.source = d.source; upd.sourceKey = d.key; }
         else { upd.source = cur.source === 'mail' ? 'mail' : ''; upd.sourceKey = ''; }
       }
       ui.modal = null;
       S.updateTask(id, upd);
+      S.syncPlanDates();
       toast('Gespeichert');
     } else if (kind === 'confirm') {
       var cm = ui.modal;
@@ -1014,6 +1059,11 @@
       var url = el.value.trim();
       S.setCalendar({ url: url, error: null });
       if (url && !/\.html?(\?|$)/i.test(url)) K.cal.sync(true);
+      return;
+    }
+    if (el.hasAttribute('data-repeat-for')) {
+      S.updateTask(el.getAttribute('data-repeat-for'), { repeat: el.value });
+      toast('Rhythmus geändert');
       return;
     }
     if (el.hasAttribute('data-week-check')) {
@@ -1178,7 +1228,7 @@
   // ---- Drag & Drop: Sortieren und auf Listen ziehen
   var dragId = null;
   function onDragStart(e) {
-    var row = e.target.closest && e.target.closest('.task[draggable="true"], .plan-chip[draggable="true"]');
+    var row = e.target.closest && e.target.closest('.task[draggable="true"], .plan-chip[draggable="true"], .pcard[draggable="true"]');
     if (!row) return;
     dragId = row.getAttribute('data-id');
     e.dataTransfer.effectAllowed = 'move';
@@ -1193,6 +1243,18 @@
       var tl = e.target.closest('.tl');
       if (tl) { e.preventDefault(); clearDropMarks(); K.cal.showGhost(tl, e.clientY, 60); return; }
       K.cal.hideGhost();
+      var pcol = e.target.closest('.pcol');
+      if (pcol) {
+        clearDropMarks();
+        if (pcol.classList.contains('is-past')) return;
+        e.preventDefault();
+        var pc = e.target.closest('.pcard');
+        if (pc && pc.getAttribute('data-id') !== dragId && !pc.classList.contains('is-done')) {
+          var pr = pc.getBoundingClientRect();
+          pc.classList.add(e.clientY < pr.top + pr.height / 2 ? 'drop-before' : 'drop-after');
+        } else pcol.classList.add('drop-target');
+        return;
+      }
       var nav = e.target.closest('[data-drop-list]');
       var row = e.target.closest('.task');
       clearDropMarks();
@@ -1226,6 +1288,26 @@
         var snapD = S.snapshot();
         var b = K.cal.dropTask(id, tlDrop, e.clientY);
         toast('Eingeplant: ' + K.cal.hm(new Date(b.start).getTime()) + '–' + K.cal.hm(new Date(b.end).getTime()), snapD);
+        return;
+      }
+      var pcolDrop = e.target.closest('.pcol');
+      if (pcolDrop) {
+        var pcard = e.target.closest('.pcard');
+        var pBefore = pcard && pcard.classList.contains('drop-before');
+        var pAfter = pcard && pcard.classList.contains('drop-after');
+        clearDropMarks();
+        dragId = null;
+        if (pcolDrop.classList.contains('is-past')) return;
+        var day = pcolDrop.getAttribute('data-day');
+        var ids2 = $$('.pcard:not(.is-done)', pcolDrop).map(function (el) { return el.getAttribute('data-id'); }).filter(function (x) { return x !== id; });
+        var pos = ids2.length;
+        if (pcard && (pBefore || pAfter)) { var at2 = ids2.indexOf(pcard.getAttribute('data-id')); if (at2 >= 0) pos = pBefore ? at2 : at2 + 1; }
+        ids2.splice(pos, 0, id);
+        var snapP = S.snapshot();
+        var moved = S.task(id);
+        var sameDay = moved && (moved.planDate === day || (day === U.dayKey() && moved.list === 'today'));
+        S.planOn(id, day, ids2);
+        if (!sameDay) toast('Verschoben auf ' + (day === U.dayKey() ? 'heute' : shortDate(day)), snapP);
         return;
       }
       var nav = e.target.closest('[data-drop-list]');
@@ -1274,6 +1356,7 @@
   function boot() {
     K.app = { toast: toast, openModal: openModal, render: render };
     S.load();
+    S.syncPlanDates();
     applyTheme();
     try { window.name = 'kompass'; } catch (e) { }
 
@@ -1314,7 +1397,7 @@
     // Beim Tageswechsel neu zeichnen
     var lastDay = U.dayKey();
     setInterval(function () {
-      if (U.dayKey() !== lastDay) { lastDay = U.dayKey(); render(); return; }
+      if (U.dayKey() !== lastDay) { lastDay = U.dayKey(); S.syncPlanDates(); render(); return; }
       // Jetzt-Linie und freie Zeit nachziehen, aber nicht mitten in einer Eingabe oder beim Ziehen
       if ((ui.view === 'heute' || ui.view === 'kalender') && !ui.modal && !ui.palette && !K.cal.isDragging() && !dragId && !isTyping(document.activeElement)) render();
     }, 60000);

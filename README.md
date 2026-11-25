@@ -21,10 +21,11 @@ Es gibt zwei Wege, sie zu starten:
 |---|---|---|
 | Erfassen | Inbox | Text oder Link eintippen, `Strg+V` irgendwo in der App, Mail aus Outlook ins Fenster ziehen, Bookmarklet in Jira/Confluence |
 | Sortieren | Inbox | Aufgabe wählen (`J`/`K`), dann `H` Heute, `W` Woche, `S` Später, `A` Warten auf, `G` Agenda, `Entf` Löschen |
+| Woche planen | Plan (`3`) | Eine Spalte pro Tag: Aufgaben direkt einem Tag zuordnen oder zwischen Tagen ziehen. Am Tag selbst stehen sie automatisch auf „Heute“. Wiederkehrende Aufgaben legen beim Abhaken das nächste Vorkommen an |
 | Planen | Heute, Kalender | Aufgabe in die Zeitleiste ziehen oder `P` für die nächste freie Lücke; Outlook-Termine liegen grau im Hintergrund |
 | Arbeiten | Fokus | `F` öffnet eine Aufgabe im Fokus, `T` startet den Timer, `Strg+Enter` erledigt sie |
 | Nachfassen | Heute, Warten auf | Fällige Warten-auf-Einträge erscheinen oben auf „Heute“ |
-| Zurückblicken | Rückblick (`9`) | Freitags: Fokus- gegen Meetingzeit, Fokus pro Bereich, Liegengebliebenes, Abschluss-Checkliste, Wochenfokus für nächste Woche |
+| Zurückblicken | Rückblick (`0`) | Freitags: Fokus- gegen Meetingzeit, Fokus pro Bereich, Liegengebliebenes, Abschluss-Checkliste, Wochenfokus für nächste Woche |
 
 Alle Kürzel zeigt `?` in der App. `Strg+K` sucht über alle Aufgaben und Befehle.
 
@@ -62,6 +63,7 @@ app/
   js/ics.js             liest .ics-Dateien inkl. Serienterminen und Zeitzonen
   js/calendar.js        Zeitleiste, Wochenansicht, freie Zeit, Zeitblöcke
   js/review.js          Wochenrückblick, Wochenfokus, Abschluss-Checkliste
+  js/plan.js            Plan-Ansicht mit Tagesspalten, wiederkehrende Aufgaben
 tools/build_single.py   baut dist/kompass.html
 ```
 
@@ -72,4 +74,5 @@ Nach Änderungen in `app/` die Einzeldatei neu bauen (`python3 tools/build_singl
 - [x] Phase 1: Inbox mit Link-Erkennung, Bookmarklet, Drag & Drop aus Outlook, Sortieren, Heute, Woche, Später, Warten auf, Agenda, Fokus mit Timer, Suche, Tastenkürzel, Themes, Backup
 - [x] Phase 2: Tageszeitleiste auf „Heute“, Wochenkalender, Zeitblöcke per Drag & Drop (verschieben, Länge ändern), `P` plant in die nächste Lücke, Outlook-Termine per ICS-Link oder `.ics`-Datei, freie Zeit pro Tag
 - [x] Phase 3: Wochenrückblick (Fokus- vs. Meetingzeit pro Tag, Fokus pro Bereich mit Wochenziel, Erledigtes, was Aufmerksamkeit braucht), Wochenfokus mit bis zu drei Punkten (auch auf „Heute“), Abschluss-Checkliste mit Notiz, Hinweis am Freitagnachmittag
+- [x] Plan-Ansicht: Tagesspalten von einer Woche zurück bis vier Wochen voraus, Eingabe pro Tag, Karten zwischen Tagen ziehen, Bereichsfilter, Erledigte ein- und ausblenden, wiederkehrende Aufgaben (täglich, werktags, wöchentlich, alle 2 Wochen, monatlich)
 - [ ] Später: Sync mit dem iPhone; Microsoft-Graph-Anbindung, falls die IT sie erlaubt
