@@ -10,7 +10,8 @@ Kompass ist eine statische Web-App ohne Server und ohne Abhängigkeiten. Alle Da
 
 Es gibt zwei Wege, sie zu starten:
 
-1. **Über GitHub Pages (empfohlen).** Der Workflow `.github/workflows/pages.yml` veröffentlicht den Ordner `app/`. Einmalig nötig: im Repo unter *Settings → Pages* bei *Source* „GitHub Actions“ wählen. Für private Repos gibt es Pages nur mit einem bezahlten GitHub-Konto; der Code enthält keine persönlichen Daten, das Repo kann also auch öffentlich sein.
+1. **Über GitHub Pages (empfohlen):** https://benjamin-sir.github.io/kompass/
+   Pages veröffentlicht den Branch `main` direkt (*Settings → Pages → Deploy from a branch*, `main`, Ordner `/`). Die Startseite leitet auf `app/` weiter; `.nojekyll` sorgt dafür, dass die Dateien unverändert ausgeliefert werden. Jeder Push auf `main` ist nach ein bis zwei Minuten online.
    In Edge dann über das Menü *Apps → Diese Website als App installieren*. Das geht ohne Admin-Rechte, Kompass bekommt ein eigenes Fenster und läuft auch offline.
 2. **Als Einzeldatei.** `dist/kompass.html` herunterladen, z. B. in OneDrive ablegen und per Doppelklick in Edge öffnen. Keine Installation, kein Server. Bookmarklet, Offline-Cache und App-Installation gibt es so nicht. Achtung: Die Daten hängen am Speicherort der Datei. Wechselst du später zur Pages-Version, nimm sie per Backup mit.
 
@@ -62,7 +63,7 @@ app/
 tools/build_single.py   baut dist/kompass.html
 ```
 
-Nach Änderungen in `app/` die Einzeldatei neu bauen: `python3 tools/build_single.py`.
+Nach Änderungen in `app/` die Einzeldatei neu bauen (`python3 tools/build_single.py`) und mit committen.
 
 ## Stand und nächste Schritte
 
