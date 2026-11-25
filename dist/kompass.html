@@ -458,6 +458,8 @@ body.is-dropping #drop-hint { display: flex; }
 .blk.is-short { flex-direction: row; gap: 6px; align-items: center; padding-top: 0; padding-bottom: 0; }
 .blk-t { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .blk-time { color: var(--fg-muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.blk.is-short .blk-t { flex: 1 1 auto; min-width: 2em; }
+.blk.is-short .blk-time { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .blk.is-done { opacity: .55; }
 .blk.is-done .blk-t { text-decoration: line-through; }
 .blk.is-running { box-shadow: 0 0 0 2px var(--accent), 0 2px 6px rgba(15, 25, 40, .12); }
